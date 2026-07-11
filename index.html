@@ -126,6 +126,15 @@
   .fbtn:hover{color:var(--cyan);border-color:var(--line-strong)}
   .fbtn.on{color:var(--void);background:var(--cyan);border-color:var(--cyan)}
 
+  /* ---------- start gate ---------- */
+  #gate{position:fixed;inset:0;background:radial-gradient(ellipse at 50% 42%, #0A1930 0%, #03080F 70%);z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer}
+  #gate.gone{display:none}
+  .gcore{width:120px;height:120px;border-radius:50%;border:2px solid var(--cyan);box-shadow:0 0 60px rgba(83,225,255,.5), inset 0 0 40px rgba(83,225,255,.25);animation:pulse-g 2.2s ease-in-out infinite;margin-bottom:34px}
+  @keyframes pulse-g{0%,100%{transform:scale(1);opacity:.85}50%{transform:scale(1.08);opacity:1}}
+  .gtitle{font-size:44px;font-weight:700;letter-spacing:22px;color:var(--cyan);text-shadow:0 0 32px rgba(83,225,255,.6);margin-left:22px}
+  .gsub{font-family:'Share Tech Mono';font-size:13px;letter-spacing:5px;color:var(--text);margin-top:16px}
+  .ghint{font-size:12px;letter-spacing:1px;color:var(--muted);margin-top:10px}
+
   /* ---------- settings modal ---------- */
   #setModal{position:fixed;inset:0;background:rgba(3,8,15,.85);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;z-index:50}
   #setModal.open{display:flex}
@@ -156,9 +165,15 @@
 </style>
 </head>
 <body>
+<div id="gate">
+  <div class="gcore"></div>
+  <div class="gtitle">ALYA</div>
+  <div class="gsub">TAP ANYWHERE TO START</div>
+  <div class="ghint">One tap arms my voice and my ears, Captain — Chrome requires it.</div>
+</div>
 <div id="app">
   <header>
-    <div class="brand"><h1>ALYA</h1><small>OPERATING SYSTEM · v2.4 FAILSAFE VOICE</small></div>
+    <div class="brand"><h1>ALYA</h1><small>OPERATING SYSTEM · v2.5 TAP TO START</small></div>
     <div class="hstat mono">
       <span><span class="dot"></span>ONLINE</span>
       <span id="clock">--:--</span>
@@ -884,13 +899,15 @@ setInterval(()=>{
 setInterval(()=>{ document.getElementById('clock').textContent=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})+' GST'; },1000);
 switchAgent(agents[0], false);
 if(SR) buildRec(); else setState('Voice recognition unsupported in this browser — use Chrome for the full experience, Captain.');
-document.body.addEventListener('click', ()=>{ if(wakeMode) startListening(); }, {once:true});
-loadState().then(()=>{
-  setTimeout(()=>{
-    speak(agents[0], 'Alya online, version two point four. Good day, Captain. Premium voices with instant failsafe — no more waiting on me.');
-    setTimeout(()=>{ if(wakeMode) startListening(); }, 500);
-  }, 900);
+let booted=false;
+document.getElementById('gate').addEventListener('click', ()=>{
+  if(booted) return; booted=true;
+  document.getElementById('gate').classList.add('gone');
+  try{ speechSynthesis.resume(); }catch(e){}
+  startListening();
+  setTimeout(()=>{ speak(agents[0], 'Alya online, version two point five. Good day, Captain. Voice and ears armed — I am all yours.'); }, 250);
 });
+loadState();
 </script>
 </body>
 </html>
