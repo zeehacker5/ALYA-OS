@@ -36,7 +36,7 @@
   .mono{font-family:'Share Tech Mono',monospace}
 
   /* ---------- layout ---------- */
-  #app{display:grid;grid-template-rows:52px 1fr 96px;height:100vh}
+  #app{display:grid;grid-template-rows:52px 1fr auto;height:100vh}
   header{
     display:flex;align-items:center;justify-content:space-between;
     padding:0 20px;border-bottom:1px solid var(--line);
@@ -104,11 +104,11 @@
 
   /* ---------- command bar ---------- */
   footer{
-    border-top:1px solid var(--line);display:flex;align-items:center;gap:14px;padding:0 20px;
+    border-top:1px solid var(--line);display:flex;align-items:center;flex-wrap:wrap;gap:10px 14px;padding:10px 16px;
     background:linear-gradient(0deg, rgba(10,25,48,.95), rgba(7,17,32,.6));
   }
   #micBtn{
-    width:62px;height:62px;border-radius:50%;border:2px solid var(--active);
+    width:54px;height:54px;border-radius:50%;border:2px solid var(--active);
     background:radial-gradient(circle, color-mix(in srgb,var(--active) 20%, transparent), rgba(7,17,32,.9) 75%);
     color:var(--active);cursor:pointer;font-size:24px;flex-shrink:0;transition:all .2s;
     display:flex;align-items:center;justify-content:center;
@@ -116,13 +116,13 @@
   #micBtn:hover{box-shadow:0 0 22px color-mix(in srgb,var(--active) 45%, transparent)}
   #micBtn.live{background:var(--active);color:var(--void);box-shadow:0 0 30px var(--active);animation:blink 1s infinite}
   #cmd{
-    flex:1;background:rgba(3,8,15,.7);border:1px solid var(--line);color:var(--text);
-    padding:13px 16px;font-family:'Rajdhani';font-size:16px;letter-spacing:.5px;outline:none;border-radius:2px;
+    flex:1;min-width:220px;background:rgba(3,8,15,.7);border:1px solid var(--line);color:var(--text);
+    padding:11px 14px;font-family:'Rajdhani';font-size:15px;letter-spacing:.5px;outline:none;border-radius:2px;
   }
   #cmd:focus{border-color:var(--line-strong)}
   #cmd::placeholder{color:var(--muted)}
-  .fbtns{display:flex;flex-direction:column;gap:6px}
-  .fbtn{background:transparent;border:1px solid var(--line);color:var(--muted);font-family:'Share Tech Mono';font-size:10px;letter-spacing:1.5px;padding:5px 12px;cursor:pointer;border-radius:2px;transition:all .15s}
+  .fbtns{display:flex;flex-direction:row;flex-wrap:wrap;gap:6px;align-items:center;max-width:100%}
+  .fbtn{background:transparent;border:1px solid var(--line);color:var(--muted);font-family:'Share Tech Mono';font-size:9.5px;letter-spacing:1px;padding:5px 9px;cursor:pointer;border-radius:2px;transition:all .15s;white-space:nowrap}
   .fbtn:hover{color:var(--cyan);border-color:var(--line-strong)}
   .fbtn.on{color:var(--void);background:var(--cyan);border-color:var(--cyan)}
 
@@ -158,7 +158,7 @@
 <body>
 <div id="app">
   <header>
-    <div class="brand"><h1>ALYA</h1><small>OPERATING SYSTEM · v1.9 ZERO-DROP</small></div>
+    <div class="brand"><h1>ALYA</h1><small>OPERATING SYSTEM · v2.4 FAILSAFE VOICE</small></div>
     <div class="hstat mono">
       <span><span class="dot"></span>ONLINE</span>
       <span id="clock">--:--</span>
@@ -212,12 +212,12 @@
     <button id="micBtn" title="Speak">◉</button>
     <input id="cmd" placeholder='Speak or type — e.g. "Jarvis, what&#39;s next on my calendar?" · "Check my inbox" · "Alya, create an agent for travel"'>
     <div class="fbtns">
-      <button class="fbtn on" id="wakeBtn">WAKE WORDS: ON</button>
+      <button class="fbtn on" id="wakeBtn">WAKE: ON</button>
       <button class="fbtn on" id="modeBtn">MIC: OPEN</button>
-      <button class="fbtn on" id="wellBtn">DR. HANNAH: ON</button>
-      <button class="fbtn" id="feedBtn">📎 FEED AGENT</button>
+      <button class="fbtn on" id="wellBtn">HANNAH: ON</button>
+      <button class="fbtn" id="feedBtn">📎 FEED</button>
       <button class="fbtn" id="muteBtn">VOICES: ON</button>
-      <button class="fbtn" id="fsBtn">FULLSCREEN</button>
+      <button class="fbtn" id="fsBtn">⛶ FULL</button>
     </div>
     <input type="file" id="feedFile" accept=".csv,.txt,.md,.json,.tsv" style="display:none">
   </footer>
@@ -346,7 +346,7 @@ setInterval(()=>{
     if(h) speak(h, WELL_MSGS[Math.floor(Math.random()*WELL_MSGS.length)]);
   }
 }, 3600000);
-document.getElementById('wellBtn').onclick=function(){ wellness=!wellness; this.textContent='DR. HANNAH: '+(wellness?'ON':'OFF'); this.classList.toggle('on',wellness); };
+document.getElementById('wellBtn').onclick=function(){ wellness=!wellness; this.textContent='HANNAH: '+(wellness?'ON':'OFF'); this.classList.toggle('on',wellness); };
 async function saveAgents(){
   const custom = agents.filter(a=>a.custom);
   await store.set('alya-agents', JSON.stringify(custom));
@@ -449,31 +449,67 @@ function voiceFor(a){
 }
 function speak(a, text, onDone){
   addLog('agent', a.name, text);
-  if(!voicesOn){ onDone&&onDone(); return; }
+  if(!voicesOn){ setState('VOICES ARE OFF — tap the VOICES button to unmute, Captain.'); onDone&&onDone(); return; }
   if(EL_KEY && a.el){ speakEleven(a, text, onDone); return; }
   speakWeb(a, text, onDone);
 }
 function speakWeb(a, text, onDone){
-  speechSynthesis.cancel();
-  const u=new SpeechSynthesisUtterance(text);
-  const v = a.locked || voiceFor(a); if(v) u.voice=v;
-  u.pitch=a.pitch; u.rate=a.rate;
+  if(!voicesOn){ onDone&&onDone(); return; }
   const card=document.getElementById('ag-'+a.id);
-  u.onstart=()=>{ pauseEars(); coreMode('speaking'); card&&card.classList.add('talking'); setState(a.name+' SPEAKING', true); };
-  u.onend=()=>{ coreMode('idle'); card&&card.classList.remove('talking'); hotUntil=Date.now()+15000; setState('FOLLOW-UP OPEN — just speak to '+a.name+', or call another agent.'); onDone&&onDone(); resumeEars(); setTimeout(flushQueue,400); };
-  u.onerror=()=>{ coreMode('idle'); card&&card.classList.remove('talking'); onDone&&onDone(); resumeEars(); };
-  speechSynthesis.speak(u);
+  let finished=false;
+  const finish=(ok)=>{
+    if(finished) return; finished=true;
+    coreMode('idle'); card&&card.classList.remove('talking');
+    if(ok){ hotUntil=Date.now()+15000; setState('FOLLOW-UP OPEN — just speak to '+a.name+', or call another agent.'); }
+    onDone&&onDone(); resumeEars(); setTimeout(flushQueue,400);
+  };
+  const attempt=(n)=>{
+    try{ speechSynthesis.cancel(); }catch(e){}
+    const u=new SpeechSynthesisUtterance(text);
+    const v = a.locked || voiceFor(a); if(v) u.voice=v;
+    u.pitch=a.pitch; u.rate=a.rate;
+    let started=false;
+    u.onstart=()=>{ started=true; pauseEars(); coreMode('speaking'); card&&card.classList.add('talking'); setState(a.name+' SPEAKING', true); };
+    u.onend=()=>{ if(started) finish(true); };
+    u.onerror=(ev)=>{
+      if(ev.error==='interrupted'||ev.error==='canceled') return; /* deliberate stop */
+      if(!started && n<2){ setTimeout(()=>attempt(n+1), 180); } else finish(false);
+    };
+    /* wedge detector: if the engine never starts, kick it and retry */
+    setTimeout(()=>{
+      if(!started && !finished){
+        if(n<2){ attempt(n+1); }
+        else { setState('Voice engine stalled — the reply is written in the log, Captain.'); finish(false); }
+      }
+    }, 1600);
+    setTimeout(()=>{ try{ speechSynthesis.resume(); }catch(e){} try{ speechSynthesis.speak(u); }catch(e){ finish(false); } }, 80);
+  };
+  attempt(0);
 }
+
+/* Chrome speech-engine keep-alive: prevents the classic wedged/paused synthesis state */
+setInterval(()=>{
+  try{
+    if(speechSynthesis.paused) speechSynthesis.resume();
+    if(speechSynthesis.speaking) speechSynthesis.resume();
+  }catch(e){}
+}, 5000);
+let elFails=0, elDisabled=false;
 async function speakEleven(a, text, onDone){
+  if(elDisabled){ speakWeb(a, text, onDone); return; }
   const card=document.getElementById('ag-'+a.id);
   try{
     pauseEars(); coreMode('speaking'); card&&card.classList.add('talking'); setState(a.name+' SPEAKING', true);
+    const ctl=new AbortController(); const tmo=setTimeout(()=>ctl.abort(), 6000);
     const res=await fetch('https://api.elevenlabs.io/v1/text-to-speech/'+a.el,{
       method:'POST',
       headers:{'xi-api-key':EL_KEY,'Content-Type':'application/json'},
-      body:JSON.stringify({text, model_id:'eleven_multilingual_v2', voice_settings:{stability:0.5, similarity_boost:0.8}})
+      body:JSON.stringify({text, model_id:'eleven_multilingual_v2', voice_settings:{stability:0.5, similarity_boost:0.8}}),
+      signal:ctl.signal
     });
-    if(!res.ok) throw new Error('EL '+res.status);
+    clearTimeout(tmo);
+    if(!res.ok) throw new Error('ElevenLabs replied '+res.status+(res.status===401?' (key rejected — check Text to Speech permission)':''));
+    elFails=0;
     const blob=await res.blob();
     const audio=new Audio(URL.createObjectURL(blob));
     curAudio=audio;
@@ -482,7 +518,11 @@ async function speakEleven(a, text, onDone){
     audio.onended=done; audio.onerror=done;
     await audio.play();
   }catch(e){
-    console.warn('ElevenLabs fell back to device voice:', e);
+    elFails++;
+    if(elFails>=2 && !elDisabled){
+      elDisabled=true;
+      addLog('sys','SYSTEM','Premium voices unreachable ('+(e.message||e)+'). Switching to device voices for this session. Fix: in ElevenLabs, edit your API key and set Text to Speech to \u201CHas access\u201D, then refresh.');
+    }
     card&&card.classList.remove('talking');
     speakWeb(a, text, onDone);
   }
@@ -495,13 +535,19 @@ function buildRec(){
   rec=new SR(); rec.lang='en-US'; rec.interimResults=true; rec.continuous=true;
   rec.onstart=()=>{ listening=true; micUI(true); if(!busy){ coreMode('listening'); setState(wakeMode?'WAKE MODE ACTIVE — say \u201CAlya\u201D, \u201CJarvis\u201D, or any agent name.':'LISTENING…', true); } };
   rec.onend=()=>{ listening=false; micUI(false);
-    if(wakeMode && !earsPaused){ clearTimeout(restartTimer); restartTimer=setTimeout(()=>{ try{rec.start()}catch(e){} }, 350); }
+    if(wakeMode){ clearTimeout(restartTimer); restartTimer=setTimeout(()=>{ try{rec.start()}catch(e){} }, 350); }
     else if(document.getElementById('core').className==='listening') coreMode('idle');
   };
   rec.onerror=(e)=>{ listening=false; micUI(false);
-    if(e.error==='not-allowed'){ wakeMode=false; syncWakeBtn(); coreMode('idle'); setState('Microphone blocked — allow mic access in the browser, Captain, then switch wake words back on.'); }
+    if(e.error==='not-allowed'){
+      setState('Chrome paused the microphone — one click anywhere re-arms it, Captain.');
+      document.body.addEventListener('click', ()=>{ if(wakeMode) startListening(); }, {once:true});
+    }
   };
+  rec.onaudiostart=rec.onsoundstart=rec.onspeechstart=()=>{ lastAlive=Date.now(); };
   rec.onresult=(e)=>{
+    lastAlive=Date.now();
+    if(earsPaused || speechSynthesis.speaking || curAudio || Date.now()<graceUntil){ pendBuf=''; return; } /* her own voice — ignore */
     for(let i=e.resultIndex;i<e.results.length;i++){ const r=e.results[i];
       if(r.isFinal){ const t=r[0].transcript.trim(); if(t.length>1) pendBuf+=(pendBuf?' ':'')+t; }
       else { const it=r[0].transcript.trim(); if(it && !busy) setState('“'+(pendBuf?pendBuf+' ':'')+it+'”', true); }
@@ -516,9 +562,25 @@ function scheduleProcess(){
   pendTimer=setTimeout(()=>{ const t=pendBuf.trim(); pendBuf=''; if(t) onHeard(t); }, 1300);
 }
 function micUI(on){ document.getElementById('micBtn').classList.toggle('live', on); }
+let lastAlive=Date.now();
+setInterval(()=>{
+  if(!rec || !wakeMode) return;
+  const speaking = speechSynthesis.speaking || !!curAudio;
+  // unstick: if ears are paused but nobody is actually talking, release them
+  if(earsPaused && !speaking && !busy){ earsPaused=false; }
+  if(!listening){
+    try{ rec.start(); }
+    catch(e){ if(/already started/i.test(e.message||'')){ listening=true; } }
+  } else if(Date.now()-lastAlive > 60000){
+    try{ rec.abort(); }catch(e){} // zombie session — abort; onend auto-restarts fresh
+    lastAlive=Date.now();
+  }
+}, 4000);
+window.addEventListener('focus', ()=>{ if(wakeMode && !earsPaused) startListening(); });
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && wakeMode && !earsPaused) startListening(); });
 let curAudio=null;
 function stopSpeaking(){
-  try{ speechSynthesis.cancel(); }catch(e){}
+  try{ speechSynthesis.cancel(); speechSynthesis.resume(); }catch(e){}
   if(curAudio){ try{ curAudio.pause(); }catch(e){} curAudio=null; }
   document.querySelectorAll('.agent.talking').forEach(el=>el.classList.remove('talking'));
   coreMode('idle');
@@ -531,8 +593,9 @@ function interrupt(){
 }
 document.getElementById('core').style.cursor='pointer';
 document.getElementById('core').onclick=()=>{ if(document.getElementById('core').className==='speaking'||speechSynthesis.speaking||curAudio) interrupt(); };
-function pauseEars(){ earsPaused=true; clearTimeout(restartTimer); try{ rec&&rec.stop(); }catch(e){} }
-function resumeEars(){ earsPaused=false; if(wakeMode) startListening(); }
+let graceUntil=0;
+function pauseEars(){ earsPaused=true; }  /* mic stays OPEN — results are ignored while agents speak */
+function resumeEars(){ earsPaused=false; graceUntil=Date.now()+700; pendBuf=''; if(wakeMode) startListening(); }
 function startListening(){ if(!rec || listening || earsPaused) return; try{ rec.start(); }catch(e){} }
 
 function flushQueue(){ if(queued && !busy){ const q=queued; queued=null; onHeard(q); } }
@@ -556,7 +619,7 @@ function onHeard(text){
 document.getElementById('modeBtn').onclick=function(){ openMic=!openMic; this.textContent='MIC: '+(openMic?'OPEN':'NAMES'); this.classList.toggle('on',openMic);
   addLog('sys','SYSTEM', openMic? 'Open mic — everything you say goes to the active agent.' : 'Names mode — say an agent name to speak.'); };
 
-function syncWakeBtn(){ const b=document.getElementById('wakeBtn'); b.textContent='WAKE WORDS: '+(wakeMode?'ON':'OFF'); b.classList.toggle('on', wakeMode); }
+function syncWakeBtn(){ const b=document.getElementById('wakeBtn'); b.textContent='WAKE: '+(wakeMode?'ON':'OFF'); b.classList.toggle('on', wakeMode); }
 document.getElementById('wakeBtn').onclick=()=>{ wakeMode=!wakeMode; syncWakeBtn();
   if(wakeMode) startListening(); else { pauseEars(); earsPaused=false; coreMode('idle'); setState('Wake words off. Tap the core to speak, Captain.'); } };
 document.getElementById('micBtn').onclick=()=>{
@@ -618,7 +681,7 @@ function detectForward(text){
 
 async function handleUtterance(text){
   if(busy) return;
-  addLog('user','CAPTAIN', text);
+  addLog('user','Dr.', text);
   userTurns++; if(userTurns % 8 === 0) learnProfile();
   const called = detectAgentCall(text);
   let target = active;
@@ -656,8 +719,9 @@ async function handleUtterance(text){
     let spec = routeFromAlya(payload);
     if(spec && target.id==='jarvis' && spec.id==='nexus') spec=null; // Jarvis handles email/calendar himself
     if(spec){
-      addLog('sys',target.name,'Delegating to '+spec.name+'.');
-      speak(target, spec.spoken + ', take this one.', ()=>{ switchAgent(spec,false); askAgent(spec, payload); });
+      addLog('sys',target.name,'Relaying to '+spec.name+'.');
+      const brief = payload.length>140 ? payload.slice(0,140)+'…' : payload;
+      speak(target, spec.spoken + ', the Captain needs this: ' + brief + ' Go ahead.', ()=>{ switchAgent(spec,false); askAgent(spec, payload, {relayFrom:target}); });
       return;
     }
   }
@@ -728,7 +792,7 @@ function sanitizeHistory(h){
 const MCP_AGENTS=['alya','jarvis','nexus'];
 const NEWS_TRIGGER=/\b(news|headline|latest|update on|happening|current events|trending|today in)\b/i;
 const DRAFT_TRIGGER=/\b(draft|write|prepare|compose|redline|review)\b[\s\S]*\b(contract|agreement|nda|mou|letter|policy|document|proposal|clause|terms)\b/i;
-async function askAgent(a, text){
+async function askAgent(a, text, opts={}){
   if(!IN_ARTIFACT && !AI_KEY){
     speak(a, "My intelligence link isn't configured on this machine yet, Captain. Tap the KEYS button at the top, paste your Anthropic API key, and I'll be fully thinking within seconds.");
     return;
@@ -739,6 +803,7 @@ async function askAgent(a, text){
   const drafting = DRAFT_TRIGGER.test(text);
   let sysExtra='';
   if(MCP_TRIGGER.test(text) && !IN_ARTIFACT) sysExtra='\n\nNote: live Gmail/Calendar access is only wired up when ALYA OS runs inside claude.ai for now. If the Captain asks about email or calendar, briefly tell him to open ALYA inside claude.ai for live data, and help with anything else you can.';
+  if(opts.relayFrom) sysExtra+='\n\nRELAY: '+opts.relayFrom.name+' has just asked you this on the Captain\u2019s behalf, out loud. Begin your reply by briefly acknowledging '+opts.relayFrom.spoken+' (for example "On it, '+opts.relayFrom.spoken+'.") and then deliver your answer to the Captain.';
   if(drafting) sysExtra+='\n\nDRAFTING MODE: The Captain wants a full document. Ignore the short-reply rule. Open with ONE short spoken sentence, then a line with only "---", then the complete, professional document in plain text (no markdown symbols). Mark it as a draft for review by a licensed professional where appropriate.';
   try{ const knw=await store.get('alya-knw-'+a.id); if(knw) sysExtra+='\n\nThe Captain\u2019s private files shared with you (treat as confidential, use freely to answer him):\n'+knw.slice(-8000); }catch(e){}
   if((a.id==='zee'||a.id==='stark') && /github|repo|repos|repository|commit|pull request|issues?\b|codebase/i.test(text)){
@@ -822,7 +887,7 @@ if(SR) buildRec(); else setState('Voice recognition unsupported in this browser 
 document.body.addEventListener('click', ()=>{ if(wakeMode) startListening(); }, {once:true});
 loadState().then(()=>{
   setTimeout(()=>{
-    speak(agents[0], 'Alya online, version one point nine. Good day, Captain. Open mic is on — just speak to me.');
+    speak(agents[0], 'Alya online, version two point four. Good day, Captain. Premium voices with instant failsafe — no more waiting on me.');
     setTimeout(()=>{ if(wakeMode) startListening(); }, 500);
   }, 900);
 });
