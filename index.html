@@ -158,7 +158,7 @@
 <body>
 <div id="app">
   <header>
-    <div class="brand"><h1>ALYA</h1><small>OPERATING SYSTEM · v1.0 PROTOTYPE</small></div>
+    <div class="brand"><h1>ALYA</h1><small>OPERATING SYSTEM · v1.9 ZERO-DROP</small></div>
     <div class="hstat mono">
       <span><span class="dot"></span>ONLINE</span>
       <span id="clock">--:--</span>
@@ -199,6 +199,8 @@
       <input id="aiKey" type="password" placeholder="sk-ant-…" autocomplete="off">
       <label>ELEVENLABS API KEY <span>(optional — premium voices)</span></label>
       <input id="elKey" type="password" placeholder="xi-…" autocomplete="off">
+      <label>GITHUB TOKEN <span>(optional — lets Z and Stark see your repos)</span></label>
+      <input id="ghKey" type="password" placeholder="github_pat_… or ghp_…" autocomplete="off">
       <div class="mrow">
         <button class="fbtn" id="setCancel">CLOSE</button>
         <button class="fbtn on" id="setSave">SAVE KEYS</button>
@@ -211,10 +213,13 @@
     <input id="cmd" placeholder='Speak or type — e.g. "Jarvis, what&#39;s next on my calendar?" · "Check my inbox" · "Alya, create an agent for travel"'>
     <div class="fbtns">
       <button class="fbtn on" id="wakeBtn">WAKE WORDS: ON</button>
+      <button class="fbtn on" id="modeBtn">MIC: OPEN</button>
       <button class="fbtn on" id="wellBtn">DR. HANNAH: ON</button>
+      <button class="fbtn" id="feedBtn">📎 FEED AGENT</button>
       <button class="fbtn" id="muteBtn">VOICES: ON</button>
       <button class="fbtn" id="fsBtn">FULLSCREEN</button>
     </div>
+    <input type="file" id="feedFile" accept=".csv,.txt,.md,.json,.tsv" style="display:none">
   </footer>
 </div>
 
@@ -225,7 +230,11 @@
    Specialists: Nexus · Stark · ZEE · Dr. Hannah · Morgan · Atlas · Jonathan
 =============================================================*/
 
-const GLOBAL_RULES = `You are one agent inside "ALYA OS", a private multi-agent assistant built for Dr. Captain Mohamed Al Mubarak, CEO of NFINITY8 (Dubai event-management & creative agency). Address him as "Captain". Your replies are spoken aloud by text-to-speech, so keep them SHORT and natural — 1 to 3 spoken sentences unless the Captain explicitly asks for detail. Never use markdown, bullets, or emojis. Stay strictly in your role; if a request belongs to another agent, briefly say which agent should handle it. Current date: ${new Date().toDateString()}.`;
+const GLOBAL_RULES = `You are one agent inside "ALYA OS", a private multi-agent assistant built for Dr. Captain Mohamed Al Mubarak, CEO of NFINITY8 (Dubai event-management & creative agency). Address him as "Captain". Your replies are spoken aloud by text-to-speech, so keep them SHORT and natural — 1 to 3 spoken sentences unless the Captain explicitly asks for detail. Never use markdown, bullets, or emojis.
+
+ABSOLUTE RULE — NEVER DROP THE CAPTAIN'S QUESTION: you must always either (a) answer it directly to the best of your ability, or (b) ask him ONE short clarifying question. Never refuse, never deflect, never reply that another agent should handle it instead of answering. If the topic is another agent's specialty, still give your best brief answer first, then you may add that the specialist can go deeper.
+
+BE FULLY CONVERSATIONAL: hold the thread of the dialogue. When the Captain gives a short confirmation like "done", "yes", "I did it", or reports completing something you asked for, acknowledge it and continue naturally from where the conversation was — react to it, verify it, or take the next step. Ask brief follow-up questions when genuinely useful. Current date: ${new Date().toDateString()}.`;
 
 const CORE_AGENTS = [
  {id:'alya',   name:'ALYA',    spoken:'Alya', aliases:['alya','alia','aaliyah'], tier:'COMMAND', role:'Chief Executive', color:'#53E1FF', gender:'f', pitch:1.0, rate:1.03,
@@ -270,7 +279,7 @@ let agents = [...CORE_AGENTS];
 let active = agents[0];
 let history = [];          // {role, content} for the model
 let logMem = [];           // persisted transcript for Gamma
-let wakeMode = true, voicesOn = true, busy = false, hotUntil = 0;
+let wakeMode = true, voicesOn = true, busy = false, hotUntil = 0, busyT = 0, openMic = true, queued = null;
 
 /* ---------------- storage (works inside claude.ai AND standalone) ---------------- */
 const IN_ARTIFACT = typeof window.storage !== 'undefined';
@@ -278,11 +287,12 @@ const store = {
   async get(k){ if(IN_ARTIFACT){ try{ const r=await window.storage.get(k); return r?r.value:null; }catch(e){ return null; } } try{ return localStorage.getItem(k); }catch(e){ return null; } },
   async set(k,v){ if(IN_ARTIFACT){ try{ await window.storage.set(k,v); }catch(e){ console.error(e); } } else { try{ localStorage.setItem(k,v); }catch(e){} } }
 };
-let AI_KEY='', EL_KEY='';
+let AI_KEY='', EL_KEY='', GH_KEY='';
 
 async function loadState(){
   AI_KEY = (await store.get('alya-aikey')) || '';
   EL_KEY = (await store.get('alya-elkey')) || '';
+  GH_KEY = (await store.get('alya-ghkey')) || '';
   PROFILE = (await store.get('alya-profile')) || '';
   try{ const r = await store.get('alya-agents'); if(r){ const extra = JSON.parse(r); extra.forEach(a=>{ if(!agents.find(x=>x.id===a.id)) agents.push(a); }); } }catch(e){}
   try{ const r = await store.get('alya-log'); if(r){ logMem = JSON.parse(r); } }catch(e){}
@@ -292,7 +302,37 @@ async function loadState(){
   if(!IN_ARTIFACT && !AI_KEY) addLog('sys','SYSTEM','Standalone mode — tap ⚙ KEYS and add your Anthropic API key so the agents can think.');
 }
 
-/* ---------------- Dr. Hannah wellness pings ---------------- */
+/* ---------------- knowledge feeding (files → agent memory) ---------------- */
+document.getElementById('feedBtn').onclick=()=>{
+  addLog('sys','SYSTEM','Feeding knowledge to '+active.name+' — choose a CSV or text file. Switch agent first if you meant someone else.');
+  document.getElementById('feedFile').click();
+};
+document.getElementById('feedFile').onchange=async(e)=>{
+  const f=e.target.files[0]; if(!f) return;
+  try{
+    let text=await f.text();
+    if(text.length>15000) text=text.slice(0,15000)+'\n…(truncated)';
+    const key='alya-knw-'+active.id;
+    const old=(await store.get(key))||'';
+    const merged=(old? old+'\n\n':'')+'--- FILE: '+f.name+' ('+new Date().toLocaleDateString()+') ---\n'+text;
+    await store.set(key, merged.slice(-30000));
+    addLog('sys','SYSTEM','“'+f.name+'” absorbed into '+active.name+'\u2019s knowledge. Stored privately on this account only.');
+    speak(active, 'I have the file, Captain. '+f.name.replace(/\.[a-z]+$/i,'')+' is now part of my knowledge — ask me anything from it.');
+  }catch(err){ addLog('sys','SYSTEM','Could not read that file: '+err.message); }
+  e.target.value='';
+};
+
+/* ---------------- GitHub link for Z and Stark ---------------- */
+async function githubBrief(){
+  if(!GH_KEY) return '';
+  try{
+    const h={'Authorization':'Bearer '+GH_KEY,'Accept':'application/vnd.github+json'};
+    const repos=await (await fetch('https://api.github.com/user/repos?sort=pushed&per_page=6',{headers:h})).json();
+    if(!Array.isArray(repos)) return '';
+    const lines=repos.map(r=>`${r.full_name} — ${r.private?'private':'public'}, updated ${r.pushed_at?.slice(0,10)}, open issues: ${r.open_issues_count}${r.description? ', '+r.description.slice(0,60):''}`);
+    return '\n\nLive GitHub snapshot of the Captain\u2019s account:\n'+lines.join('\n');
+  }catch(e){ return ''; }
+}
 let wellness = true;
 const WELL_MSGS=[
  'Captain, a small pause — some water, please.',
@@ -317,16 +357,17 @@ async function saveLog(){
 
 /* ---------------- settings ---------------- */
 document.getElementById('setBtn').onclick=async()=>{
-  document.getElementById('aiKey').value=AI_KEY; document.getElementById('elKey').value=EL_KEY;
+  document.getElementById('aiKey').value=AI_KEY; document.getElementById('elKey').value=EL_KEY; document.getElementById('ghKey').value=GH_KEY;
   document.getElementById('setModal').classList.add('open');
 };
 document.getElementById('setCancel').onclick=()=>document.getElementById('setModal').classList.remove('open');
 document.getElementById('setSave').onclick=async()=>{
   AI_KEY=document.getElementById('aiKey').value.trim();
   EL_KEY=document.getElementById('elKey').value.trim();
-  await store.set('alya-aikey', AI_KEY); await store.set('alya-elkey', EL_KEY);
+  GH_KEY=document.getElementById('ghKey').value.trim();
+  await store.set('alya-aikey', AI_KEY); await store.set('alya-elkey', EL_KEY); await store.set('alya-ghkey', GH_KEY);
   document.getElementById('setModal').classList.remove('open');
-  addLog('sys','SYSTEM','Keys saved.'+(EL_KEY?' Premium voices enabled.':''));
+  addLog('sys','SYSTEM','Keys saved.'+(EL_KEY?' Premium voices enabled.':'')+(GH_KEY?' GitHub linked for Z and Stark.':''));
 };
 
 /* ---------------- UI ---------------- */
@@ -419,7 +460,7 @@ function speakWeb(a, text, onDone){
   u.pitch=a.pitch; u.rate=a.rate;
   const card=document.getElementById('ag-'+a.id);
   u.onstart=()=>{ pauseEars(); coreMode('speaking'); card&&card.classList.add('talking'); setState(a.name+' SPEAKING', true); };
-  u.onend=()=>{ coreMode('idle'); card&&card.classList.remove('talking'); setState(wakeMode?'WAKE MODE — say \u201CAlya\u201D, \u201CJarvis\u201D, or any agent name.':'Standing by, Captain.'); onDone&&onDone(); resumeEars(); };
+  u.onend=()=>{ coreMode('idle'); card&&card.classList.remove('talking'); hotUntil=Date.now()+15000; setState('FOLLOW-UP OPEN — just speak to '+a.name+', or call another agent.'); onDone&&onDone(); resumeEars(); setTimeout(flushQueue,400); };
   u.onerror=()=>{ coreMode('idle'); card&&card.classList.remove('talking'); onDone&&onDone(); resumeEars(); };
   speechSynthesis.speak(u);
 }
@@ -435,8 +476,9 @@ async function speakEleven(a, text, onDone){
     if(!res.ok) throw new Error('EL '+res.status);
     const blob=await res.blob();
     const audio=new Audio(URL.createObjectURL(blob));
+    curAudio=audio;
     if(a.elRate) audio.playbackRate=a.elRate;
-    const done=()=>{ coreMode('idle'); card&&card.classList.remove('talking'); setState(wakeMode?'WAKE MODE — say \u201CAlya\u201D, \u201CJarvis\u201D, or any agent name.':'Standing by, Captain.'); onDone&&onDone(); resumeEars(); };
+    const done=()=>{ if(curAudio===audio) curAudio=null; coreMode('idle'); card&&card.classList.remove('talking'); hotUntil=Date.now()+15000; setState('FOLLOW-UP OPEN — just speak to '+a.name+', or call another agent.'); onDone&&onDone(); resumeEars(); setTimeout(flushQueue,400); };
     audio.onended=done; audio.onerror=done;
     await audio.play();
   }catch(e){
@@ -460,37 +502,66 @@ function buildRec(){
     if(e.error==='not-allowed'){ wakeMode=false; syncWakeBtn(); coreMode('idle'); setState('Microphone blocked — allow mic access in the browser, Captain, then switch wake words back on.'); }
   };
   rec.onresult=(e)=>{
-    let fin='';
     for(let i=e.resultIndex;i<e.results.length;i++){ const r=e.results[i];
-      if(r.isFinal) fin+=r[0].transcript;
-      else { const it=r[0].transcript.trim(); if(it && !busy) setState('“'+it+'”', true); }
+      if(r.isFinal){ const t=r[0].transcript.trim(); if(t.length>1) pendBuf+=(pendBuf?' ':'')+t; }
+      else { const it=r[0].transcript.trim(); if(it && !busy) setState('“'+(pendBuf?pendBuf+' ':'')+it+'”', true); }
     }
-    fin=fin.trim(); if(fin) onHeard(fin);
+    scheduleProcess();
   };
 }
+/* wait for the Captain to actually finish speaking before responding */
+let pendBuf='', pendTimer=null;
+function scheduleProcess(){
+  clearTimeout(pendTimer);
+  pendTimer=setTimeout(()=>{ const t=pendBuf.trim(); pendBuf=''; if(t) onHeard(t); }, 1300);
+}
 function micUI(on){ document.getElementById('micBtn').classList.toggle('live', on); }
+let curAudio=null;
+function stopSpeaking(){
+  try{ speechSynthesis.cancel(); }catch(e){}
+  if(curAudio){ try{ curAudio.pause(); }catch(e){} curAudio=null; }
+  document.querySelectorAll('.agent.talking').forEach(el=>el.classList.remove('talking'));
+  coreMode('idle');
+}
+function interrupt(){
+  stopSpeaking();
+  hotUntil = Date.now()+9000;
+  earsPaused=false; startListening();
+  setState('GO AHEAD, CAPTAIN — LISTENING.', true); coreMode('listening');
+}
+document.getElementById('core').style.cursor='pointer';
+document.getElementById('core').onclick=()=>{ if(document.getElementById('core').className==='speaking'||speechSynthesis.speaking||curAudio) interrupt(); };
 function pauseEars(){ earsPaused=true; clearTimeout(restartTimer); try{ rec&&rec.stop(); }catch(e){} }
 function resumeEars(){ earsPaused=false; if(wakeMode) startListening(); }
 function startListening(){ if(!rec || listening || earsPaused) return; try{ rec.start(); }catch(e){} }
 
+function flushQueue(){ if(queued && !busy){ const q=queued; queued=null; onHeard(q); } }
 function onHeard(text){
-  if(busy) return;
+  if(/^(stop|cancel|quiet|enough|silence|shut up)[.!]?$/i.test(text.trim())){ stopSpeaking(); queued=null; setState('Silenced, Captain.'); return; }
+  if(busy){ queued=text; setState('QUEUED — one moment, Captain: \u201C'+text+'\u201D', true); addLog('sys','MIC','Queued while processing: \u201C'+text+'\u201D'); return; }
   const called = detectAgentCall(text);
   const hot = Date.now() < hotUntil;
-  if(wakeMode && !called && !hot){ setState('WAKE MODE — heard \u201C'+text+'\u201D. Start with an agent name, Captain.'); return; }
+  if(!openMic && wakeMode && !called && !hot){
+    addLog('sys','MIC','Heard, ignored (names mode): \u201C'+text+'\u201D');
+    setState('NAMES MODE — start with an agent name, Captain.');
+    return;
+  }
   if(called){
     const payload = stripName(text, called);
-    if(!payload){ hotUntil = Date.now()+9000; switchAgent(called,false); speak(called,'Yes, Captain?'); return; }
+    if(!payload){ hotUntil = Date.now()+12000; switchAgent(called,false); speak(called,'Yes, Captain?'); return; }
   }
   hotUntil = 0;
   handleUtterance(text);
 }
+document.getElementById('modeBtn').onclick=function(){ openMic=!openMic; this.textContent='MIC: '+(openMic?'OPEN':'NAMES'); this.classList.toggle('on',openMic);
+  addLog('sys','SYSTEM', openMic? 'Open mic — everything you say goes to the active agent.' : 'Names mode — say an agent name to speak.'); };
 
 function syncWakeBtn(){ const b=document.getElementById('wakeBtn'); b.textContent='WAKE WORDS: '+(wakeMode?'ON':'OFF'); b.classList.toggle('on', wakeMode); }
 document.getElementById('wakeBtn').onclick=()=>{ wakeMode=!wakeMode; syncWakeBtn();
   if(wakeMode) startListening(); else { pauseEars(); earsPaused=false; coreMode('idle'); setState('Wake words off. Tap the core to speak, Captain.'); } };
 document.getElementById('micBtn').onclick=()=>{
   if(!rec){ setState('Voice recognition is not supported in this browser — Chrome works best, Captain. You can still type below.'); return; }
+  if(document.getElementById('core').className==='speaking' || speechSynthesis.speaking || curAudio){ interrupt(); return; }
   hotUntil = Date.now()+9000; startListening(); setState('LISTENING — speak now, Captain.', true); coreMode('listening');
 };
 document.getElementById('muteBtn').onclick=function(){ voicesOn=!voicesOn; this.textContent='VOICES: '+(voicesOn?'ON':'OFF'); this.classList.toggle('on',!voicesOn); if(!voicesOn) speechSynthesis.cancel(); };
@@ -534,6 +605,17 @@ function routeFromAlya(payload){
   return null;
 }
 
+let lastAsk='';
+function detectForward(text){
+  for(const a of agents){
+    for(const al of (a.aliases||[])){
+      const m = text.match(new RegExp('^(?:(?:can|could|would) you\\s+)?(?:please\\s+)?(?:ask|tell|redirect(?:\\s+(?:this|that|it|my question|the question))?\\s+to|forward(?:\\s+(?:this|that|it|my question|the question))?\\s+to|send(?:\\s+(?:this|that|it))?\\s+to|hand(?:\\s+(?:this|that|it))?\\s+to)\\s+'+al+'\\b[,:.]?\\s*(?:to\\s+)?([\\s\\S]*)$','i'));
+      if(m) return {agent:a, rest:(m[1]||'').trim()};
+    }
+  }
+  return null;
+}
+
 async function handleUtterance(text){
   if(busy) return;
   addLog('user','CAPTAIN', text);
@@ -545,20 +627,74 @@ async function handleUtterance(text){
   if(target!==active) switchAgent(target, false);
   if(!payload){ speak(target, greetingFor(target)); return; }
 
+  // real forwarding: "ask Jarvis…", "redirect this to Alya", "tell Morgan to…"
+  const fwd = detectForward(payload);
+  if(fwd){
+    const q = fwd.rest || lastAsk;
+    switchAgent(fwd.agent, false);
+    if(!q){ speak(fwd.agent, 'Yes, Captain — what shall I take on?'); return; }
+    addLog('sys', target.name==='fwd'?'SYSTEM':target.name, 'Forwarding to '+fwd.agent.name+'.');
+    lastAsk = q;
+    return askAgent(fwd.agent, q);
+  }
+
   // agent creation intent → handled by Alya regardless of who's active
   if(/\b(create|make|build|add)\b.*\bagent\b/i.test(payload)){ return createAgentByVoice(payload); }
 
-  // Alya delegates specialist domains with a spoken handoff
-  if(target.id==='alya'){
-    const spec = routeFromAlya(payload);
+  // Captain reports a key was added → verify it live, immediately
+  if(/(inserted|added|entered|saved|put in|updated|installed)[\s\S]{0,30}\bkey\b|\bkey\b[\s\S]{0,25}(inserted|added|saved|is in|entered|installed|done)/i.test(payload)){
+    addLog('sys','SYSTEM','Key reported — re-verifying the intelligence link.');
+    return systemCheck();
+  }
+
+  // full diagnostics on demand — broad natural phrasing
+  if(/system (check|status|diagnostic)|status report|check the (team|system)|run a (system |full )?check|(is|are|if) (the )?(team|everyone|everybody|all( the)? agents?)[\s\S]{0,30}(working|online|running|thinking|up|alive|active)|agents? (are )?(up|online|running|thinking)/i.test(payload)){ return systemCheck(); }
+
+  // Alya and Jarvis delegate specialist domains with a spoken handoff
+  lastAsk = payload;
+  if(target.id==='alya' || target.id==='jarvis'){
+    let spec = routeFromAlya(payload);
+    if(spec && target.id==='jarvis' && spec.id==='nexus') spec=null; // Jarvis handles email/calendar himself
     if(spec){
-      addLog('sys','ALYA','Delegating to '+spec.name+'.');
+      addLog('sys',target.name,'Delegating to '+spec.name+'.');
       speak(target, spec.spoken + ', take this one.', ()=>{ switchAgent(spec,false); askAgent(spec, payload); });
       return;
     }
   }
 
   await askAgent(target, payload);
+}
+
+/* ---------------- system diagnostics ---------------- */
+async function systemCheck(){
+  busy=true; busyT=Date.now(); setState('RUNNING FULL SYSTEM CHECK…', true); coreMode('speaking');
+  const lines=[];
+  lines.push('Microphone engine: '+(rec?'PRESENT':'NOT SUPPORTED IN THIS BROWSER'));
+  lines.push('Wake mode: '+(wakeMode?'ON':'OFF'));
+  lines.push('Device voices loaded: '+VOICES.filter(v=>/^en/i.test(v.lang)).length+' — locks: '+agents.filter(a=>a.locked).map(a=>a.name+'→'+a.locked.name).join(', '));
+  lines.push('Premium voices (ElevenLabs): '+(EL_KEY?'KEY SAVED':'not set'));
+  lines.push('GitHub link: '+(GH_KEY?'KEY SAVED':'not set'));
+  lines.push('Mode: '+(IN_ARTIFACT?'claude.ai (Gmail/Calendar LIVE)':'standalone (Gmail/Calendar available inside claude.ai only)'));
+  lines.push('Behavioral profile: '+(PROFILE?'ACTIVE ('+PROFILE.length+' chars)':'still learning — builds after a few exchanges'));
+  lines.push('Memory entries: '+logMem.length);
+  let brain='NOT CONFIGURED — add the Anthropic key under KEYS';
+  if(IN_ARTIFACT || AI_KEY){
+    try{
+      const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),
+        body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:20,messages:[{role:'user',content:'Reply with exactly: LINK OK'}]})});
+      const d=await r.json();
+      const t=(d.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('');
+      brain = /LINK OK/i.test(t) ? 'LIVE — verified round trip' : (d.error? 'ERROR: '+(d.error.message||'').slice(0,80) : 'UNEXPECTED RESPONSE');
+    }catch(e){ brain='UNREACHABLE — network or key problem'; }
+  }
+  lines.push('Intelligence link (all ten agents share this one brain): '+brain);
+  addLog('sys','SYSTEM CHECK', lines.join('\n'));
+  busy=false;
+  const alya=agents.find(x=>x.id==='alya');
+  const ok = brain.startsWith('LIVE');
+  speak(alya, ok
+    ? 'System check complete, Captain. The intelligence link is live and verified — and it is one shared brain, so if I am thinking, the entire team is thinking. Full details are in the log.'
+    : 'System check complete, Captain — and I found the problem. The intelligence link reports: '+brain+'. Details are in the log on your right.');
 }
 
 /* ---------------- Claude brain ---------------- */
@@ -591,18 +727,25 @@ function sanitizeHistory(h){
 }
 const MCP_AGENTS=['alya','jarvis','nexus'];
 const NEWS_TRIGGER=/\b(news|headline|latest|update on|happening|current events|trending|today in)\b/i;
+const DRAFT_TRIGGER=/\b(draft|write|prepare|compose|redline|review)\b[\s\S]*\b(contract|agreement|nda|mou|letter|policy|document|proposal|clause|terms)\b/i;
 async function askAgent(a, text){
   if(!IN_ARTIFACT && !AI_KEY){
     speak(a, "My intelligence link isn't configured on this machine yet, Captain. Tap the KEYS button at the top, paste your Anthropic API key, and I'll be fully thinking within seconds.");
     return;
   }
-  busy=true; setState(a.name+' PROCESSING…', true); coreMode('speaking');
+  busy=true; busyT=Date.now(); setState(a.name+' PROCESSING…', true); coreMode('speaking');
   const useMcp = IN_ARTIFACT && (MCP_AGENTS.includes(a.id) || MCP_TRIGGER.test(text));
   const useSearch = NEWS_TRIGGER.test(text) || (a.id==='gamma' && /predict|forecast|market|industry|entity|competitor/i.test(text));
+  const drafting = DRAFT_TRIGGER.test(text);
   let sysExtra='';
   if(MCP_TRIGGER.test(text) && !IN_ARTIFACT) sysExtra='\n\nNote: live Gmail/Calendar access is only wired up when ALYA OS runs inside claude.ai for now. If the Captain asks about email or calendar, briefly tell him to open ALYA inside claude.ai for live data, and help with anything else you can.';
+  if(drafting) sysExtra+='\n\nDRAFTING MODE: The Captain wants a full document. Ignore the short-reply rule. Open with ONE short spoken sentence, then a line with only "---", then the complete, professional document in plain text (no markdown symbols). Mark it as a draft for review by a licensed professional where appropriate.';
+  try{ const knw=await store.get('alya-knw-'+a.id); if(knw) sysExtra+='\n\nThe Captain\u2019s private files shared with you (treat as confidential, use freely to answer him):\n'+knw.slice(-8000); }catch(e){}
+  if((a.id==='zee'||a.id==='stark') && /github|repo|repos|repository|commit|pull request|issues?\b|codebase/i.test(text)){
+    sysExtra+=await githubBrief() || '\n\nGitHub is not linked yet — tell the Captain to add a GitHub token under the KEYS button so you can see his repositories.';
+  }
   const body={
-    model:'claude-sonnet-4-6', max_tokens:1000,
+    model:'claude-sonnet-4-6', max_tokens: drafting?4000:1000,
     system: GLOBAL_RULES+'\n\n'+a.sys+sysExtra+memoryBrief(),
     messages:[...sanitizeHistory(history), {role:'user', content:text}]
   };
@@ -623,7 +766,14 @@ async function askAgent(a, text){
     } else reply='No response received, Captain.';
     history.push({role:'user',content:'['+a.name+'] '+text},{role:'assistant',content:reply});
     busy=false;
-    speak(a, reply);
+    if(reply.length>450 || reply.includes('---')){
+      const spokenLine = reply.split(/---|\n\n/)[0].trim().slice(0,300) || 'Done, Captain.';
+      addLog('agent', a.name, reply);
+      const say = drafting ? spokenLine+' The full draft is in the log on your right, Captain.' : spokenLine+' The rest is written in the log, Captain.';
+      if(EL_KEY && a.el){ speakEleven(a, say, null); } else { speakWeb(a, say, null); }
+    } else {
+      speak(a, reply);
+    }
   }catch(err){
     busy=false; coreMode('idle');
     speak(a, IN_ARTIFACT ? 'I hit a connection problem, Captain. Check the network and try again.' : 'I could not reach the intelligence servers, Captain. Check the network and that your API key under KEYS is valid.');
@@ -634,7 +784,7 @@ async function askAgent(a, text){
 /* ---------------- create agents by voice ---------------- */
 async function createAgentByVoice(request){
   if(!IN_ARTIFACT && !AI_KEY){ speak(agents[0], "I need my intelligence link first, Captain — tap KEYS and add your Anthropic API key, then ask me again."); return; }
-  busy=true; const alya=agents.find(x=>x.id==='alya'); switchAgent(alya,false);
+  busy=true; busyT=Date.now(); const alya=agents.find(x=>x.id==='alya'); switchAgent(alya,false);
   setState('ALYA — DESIGNING NEW AGENT…', true); coreMode('speaking');
   try{
     const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),
@@ -658,13 +808,21 @@ Respond with ONLY raw JSON, no markdown, no backticks, exactly:
 }
 
 /* ---------------- clock + boot ---------------- */
+/* ---------------- watchdog: never leave the Captain in silence ---------------- */
+setInterval(()=>{
+  if(busy && busyT && Date.now()-busyT > 40000){
+    busy=false; busyT=0; coreMode('idle');
+    speak(active, 'That one stalled on me, Captain — the line timed out. Ask me again, please.');
+  }
+}, 5000);
+
 setInterval(()=>{ document.getElementById('clock').textContent=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})+' GST'; },1000);
 switchAgent(agents[0], false);
 if(SR) buildRec(); else setState('Voice recognition unsupported in this browser — use Chrome for the full experience, Captain.');
 document.body.addEventListener('click', ()=>{ if(wakeMode) startListening(); }, {once:true});
 loadState().then(()=>{
   setTimeout(()=>{
-    speak(agents[0], 'Alya online. Good day, Captain. Wake words are active — just say a name and speak.');
+    speak(agents[0], 'Alya online, version one point nine. Good day, Captain. Open mic is on — just speak to me.');
     setTimeout(()=>{ if(wakeMode) startListening(); }, 500);
   }, 900);
 });
