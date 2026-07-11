@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ALYA OS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#03080F;
+    --panel:#071120;
+    --panel2:#0A1930;
+    --line:rgba(83,225,255,.14);
+    --line-strong:rgba(83,225,255,.35);
+    --cyan:#53E1FF;
+    --blue:#1A7FFF;
+    --amber:#FFB454;
+    --red:#FF3B5C;
+    --text:#D9EEFF;
+    --muted:#5E7C99;
+    --active:#53E1FF;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    background:var(--void);
+    color:var(--text);
+    font-family:'Rajdhani',system-ui,sans-serif;
+    overflow:hidden;
+    background-image:
+      radial-gradient(ellipse 60% 45% at 50% 38%, rgba(26,127,255,.08), transparent 60%),
+      repeating-linear-gradient(0deg, transparent 0 39px, rgba(83,225,255,.025) 39px 40px),
+      repeating-linear-gradient(90deg, transparent 0 39px, rgba(83,225,255,.025) 39px 40px);
+  }
+  .mono{font-family:'Share Tech Mono',monospace}
+
+  /* ---------- layout ---------- */
+  #app{display:grid;grid-template-rows:52px 1fr 96px;height:100vh}
+  header{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:0 20px;border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg, rgba(10,25,48,.9), rgba(7,17,32,.6));
+  }
+  .brand{display:flex;align-items:baseline;gap:10px}
+  .brand h1{font-size:20px;letter-spacing:8px;font-weight:700;color:var(--cyan);text-shadow:0 0 18px rgba(83,225,255,.5)}
+  .brand small{font-size:10px;letter-spacing:3px;color:var(--muted)}
+  .hstat{display:flex;gap:18px;align-items:center;font-size:11px;letter-spacing:2px;color:var(--muted)}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--cyan);box-shadow:0 0 8px var(--cyan);display:inline-block;margin-right:6px;animation:blink 2.4s infinite}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+
+  main{display:grid;grid-template-columns:290px 1fr 340px;min-height:0}
+
+  /* ---------- roster ---------- */
+  #roster{border-right:1px solid var(--line);overflow-y:auto;padding:14px 12px;background:rgba(7,17,32,.5)}
+  .tier{font-size:10px;letter-spacing:3px;color:var(--muted);margin:14px 4px 8px}
+  .tier:first-child{margin-top:0}
+  .agent{
+    display:flex;align-items:center;gap:11px;padding:9px 10px;margin-bottom:6px;
+    border:1px solid var(--line);border-left:3px solid var(--ac,var(--cyan));
+    background:linear-gradient(90deg, rgba(10,25,48,.65), rgba(7,17,32,.2));
+    cursor:pointer;transition:all .18s;border-radius:2px;
+  }
+  .agent:hover{border-color:var(--line-strong)}
+  .agent.on{background:linear-gradient(90deg, rgba(83,225,255,.12), rgba(7,17,32,.2));border-color:var(--ac,var(--cyan));box-shadow:0 0 16px rgba(83,225,255,.12)}
+  .sig{width:34px;height:34px;border-radius:50%;border:1px solid var(--ac);display:flex;align-items:center;justify-content:center;font-family:'Share Tech Mono';font-size:13px;color:var(--ac);flex-shrink:0;background:radial-gradient(circle, color-mix(in srgb, var(--ac) 18%, transparent), transparent 70%)}
+  .agent.on .sig{box-shadow:0 0 12px var(--ac)}
+  .ainfo{min-width:0}
+  .aname{font-weight:700;font-size:15px;letter-spacing:1.5px}
+  .arole{font-size:10.5px;color:var(--muted);letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .aspk{margin-left:auto;width:6px;height:6px;border-radius:50%;background:transparent;flex-shrink:0}
+  .agent.talking .aspk{background:var(--ac);box-shadow:0 0 8px var(--ac);animation:blink .5s infinite}
+
+  /* ---------- core ---------- */
+  #stage{display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;min-width:0}
+  #core{position:relative;width:min(300px,34vh);height:min(300px,34vh)}
+  #core svg{width:100%;height:100%;overflow:visible}
+  .ring{fill:none;stroke:var(--active);transform-origin:150px 150px}
+  #r1{stroke-width:1;opacity:.85;stroke-dasharray:6 10;animation:spin 24s linear infinite}
+  #r2{stroke-width:2;opacity:.5;stroke-dasharray:60 26;animation:spinr 14s linear infinite}
+  #r3{stroke-width:1;opacity:.3;stroke-dasharray:2 6;animation:spin 40s linear infinite}
+  #rGlow{stroke-width:10;opacity:.06;filter:blur(4px)}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes spinr{to{transform:rotate(-360deg)}}
+  #nucleus{fill:var(--active);opacity:.9;filter:drop-shadow(0 0 22px var(--active))}
+  #core.listening #nucleus{animation:pulse .9s ease-in-out infinite}
+  #core.speaking #nucleus{animation:pulse .35s ease-in-out infinite}
+  @keyframes pulse{0%,100%{r:26}50%{r:34}}
+  #core.idle #nucleus{animation:pulse 3.4s ease-in-out infinite}
+  #activeName{margin-top:22px;font-size:30px;font-weight:700;letter-spacing:10px;color:var(--active);text-shadow:0 0 24px color-mix(in srgb,var(--active) 60%, transparent)}
+  #activeRole{font-size:11px;letter-spacing:4px;color:var(--muted);margin-top:2px}
+  #stateLine{margin-top:14px;font-size:12px;letter-spacing:2px;color:var(--muted);min-height:18px;text-align:center;max-width:520px;padding:0 18px}
+  #stateLine.hot{color:var(--active)}
+
+  /* ---------- feed ---------- */
+  #feed{border-left:1px solid var(--line);display:flex;flex-direction:column;background:rgba(7,17,32,.5);min-height:0}
+  #feed h3{font-size:10px;letter-spacing:3px;color:var(--muted);padding:14px 16px 8px;border-bottom:1px solid var(--line)}
+  #log{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+  .msg{font-size:13.5px;line-height:1.45}
+  .msg .who{font-family:'Share Tech Mono';font-size:10.5px;letter-spacing:2px;display:block;margin-bottom:2px}
+  .msg.user .who{color:var(--amber)}
+  .msg .body{color:var(--text);opacity:.92;white-space:pre-wrap}
+  .msg.sys .body{color:var(--muted);font-size:12px;font-style:italic}
+
+  /* ---------- command bar ---------- */
+  footer{
+    border-top:1px solid var(--line);display:flex;align-items:center;gap:14px;padding:0 20px;
+    background:linear-gradient(0deg, rgba(10,25,48,.95), rgba(7,17,32,.6));
+  }
+  #micBtn{
+    width:62px;height:62px;border-radius:50%;border:2px solid var(--active);
+    background:radial-gradient(circle, color-mix(in srgb,var(--active) 20%, transparent), rgba(7,17,32,.9) 75%);
+    color:var(--active);cursor:pointer;font-size:24px;flex-shrink:0;transition:all .2s;
+    display:flex;align-items:center;justify-content:center;
+  }
+  #micBtn:hover{box-shadow:0 0 22px color-mix(in srgb,var(--active) 45%, transparent)}
+  #micBtn.live{background:var(--active);color:var(--void);box-shadow:0 0 30px var(--active);animation:blink 1s infinite}
+  #cmd{
+    flex:1;background:rgba(3,8,15,.7);border:1px solid var(--line);color:var(--text);
+    padding:13px 16px;font-family:'Rajdhani';font-size:16px;letter-spacing:.5px;outline:none;border-radius:2px;
+  }
+  #cmd:focus{border-color:var(--line-strong)}
+  #cmd::placeholder{color:var(--muted)}
+  .fbtns{display:flex;flex-direction:column;gap:6px}
+  .fbtn{background:transparent;border:1px solid var(--line);color:var(--muted);font-family:'Share Tech Mono';font-size:10px;letter-spacing:1.5px;padding:5px 12px;cursor:pointer;border-radius:2px;transition:all .15s}
+  .fbtn:hover{color:var(--cyan);border-color:var(--line-strong)}
+  .fbtn.on{color:var(--void);background:var(--cyan);border-color:var(--cyan)}
+
+  /* ---------- settings modal ---------- */
+  #setModal{position:fixed;inset:0;background:rgba(3,8,15,.85);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;z-index:50}
+  #setModal.open{display:flex}
+  #setModal .panel{width:min(480px,92vw);background:var(--panel2);border:1px solid var(--line-strong);padding:26px 28px;border-radius:3px;box-shadow:0 0 60px rgba(83,225,255,.12)}
+  #setModal h2{font-size:15px;letter-spacing:5px;color:var(--cyan);margin-bottom:10px}
+  #setModal .hint{font-size:12.5px;line-height:1.5;color:var(--muted);margin-bottom:18px}
+  #setModal label{display:block;font-family:'Share Tech Mono';font-size:10px;letter-spacing:2px;color:var(--text);margin:12px 0 5px}
+  #setModal label span{color:var(--muted)}
+  #setModal input{width:100%;background:rgba(3,8,15,.8);border:1px solid var(--line);color:var(--text);padding:10px 12px;font-family:'Share Tech Mono';font-size:13px;outline:none;border-radius:2px}
+  #setModal input:focus{border-color:var(--line-strong)}
+  #setModal .mrow{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}
+
+  /* scrollbars */
+  ::-webkit-scrollbar{width:5px}
+  ::-webkit-scrollbar-thumb{background:rgba(83,225,255,.2)}
+
+  @media (max-width:980px){
+    main{grid-template-columns:1fr}
+    #roster{display:flex;overflow-x:auto;border-right:none;border-bottom:1px solid var(--line);padding:8px}
+    .tier{display:none}
+    .agent{min-width:150px;margin:0 6px 0 0}
+    #feed{display:none}
+    #app{grid-template-rows:52px auto 1fr 96px}
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{animation:none!important}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="brand"><h1>ALYA</h1><small>OPERATING SYSTEM · v1.0 PROTOTYPE</small></div>
+    <div class="hstat mono">
+      <span><span class="dot"></span>ONLINE</span>
+      <span id="clock">--:--</span>
+      <span id="agentCount">10 AGENTS</span>
+      <button class="fbtn" id="setBtn">⚙ KEYS</button>
+    </div>
+  </header>
+
+  <main>
+    <nav id="roster"></nav>
+
+    <section id="stage">
+      <div id="core" class="idle">
+        <svg viewBox="0 0 300 300">
+          <circle class="ring" id="rGlow" cx="150" cy="150" r="120"/>
+          <circle class="ring" id="r1" cx="150" cy="150" r="120"/>
+          <circle class="ring" id="r2" cx="150" cy="150" r="96"/>
+          <circle class="ring" id="r3" cx="150" cy="150" r="66"/>
+          <circle id="nucleus" cx="150" cy="150" r="26"/>
+        </svg>
+      </div>
+      <div id="activeName">ALYA</div>
+      <div id="activeRole">CHIEF EXECUTIVE · COMMAND</div>
+      <div id="stateLine">Standing by, Captain. Tap the core button or type a command.</div>
+    </section>
+
+    <aside id="feed">
+      <h3>COMMUNICATIONS LOG</h3>
+      <div id="log"></div>
+    </aside>
+  </main>
+
+  <div id="setModal">
+    <div class="panel">
+      <h2>SYSTEM KEYS</h2>
+      <p class="hint">Inside claude.ai, Alya thinks and reads your email and calendar with no keys needed. Running as a standalone app on your Mac, paste an Anthropic API key so the agents can think. The ElevenLabs key is optional — it upgrades every agent to cinematic, human-grade voices.</p>
+      <label>ANTHROPIC API KEY <span>(required for standalone mode)</span></label>
+      <input id="aiKey" type="password" placeholder="sk-ant-…" autocomplete="off">
+      <label>ELEVENLABS API KEY <span>(optional — premium voices)</span></label>
+      <input id="elKey" type="password" placeholder="xi-…" autocomplete="off">
+      <div class="mrow">
+        <button class="fbtn" id="setCancel">CLOSE</button>
+        <button class="fbtn on" id="setSave">SAVE KEYS</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <button id="micBtn" title="Speak">◉</button>
+    <input id="cmd" placeholder='Speak or type — e.g. "Jarvis, what&#39;s next on my calendar?" · "Check my inbox" · "Alya, create an agent for travel"'>
+    <div class="fbtns">
+      <button class="fbtn on" id="wakeBtn">WAKE WORDS: ON</button>
+      <button class="fbtn on" id="wellBtn">DR. HANNAH: ON</button>
+      <button class="fbtn" id="muteBtn">VOICES: ON</button>
+      <button class="fbtn" id="fsBtn">FULLSCREEN</button>
+    </div>
+  </footer>
+</div>
+
+<script>
+/* ================= ALYA OS v1 — prototype =================
+   Built for Dr. Captain Mohamed Al Mubarak
+   Command tier: Alya (CEO) → Jarvis (PA) → Gamma (Intelligence)
+   Specialists: Nexus · Stark · ZEE · Dr. Hannah · Morgan · Atlas · Jonathan
+=============================================================*/
+
+const GLOBAL_RULES = `You are one agent inside "ALYA OS", a private multi-agent assistant built for Dr. Captain Mohamed Al Mubarak, CEO of NFINITY8 (Dubai event-management & creative agency). Address him as "Captain". Your replies are spoken aloud by text-to-speech, so keep them SHORT and natural — 1 to 3 spoken sentences unless the Captain explicitly asks for detail. Never use markdown, bullets, or emojis. Stay strictly in your role; if a request belongs to another agent, briefly say which agent should handle it. Current date: ${new Date().toDateString()}.`;
+
+const CORE_AGENTS = [
+ {id:'alya',   name:'ALYA',    spoken:'Alya', aliases:['alya','alia','aaliyah'], tier:'COMMAND', role:'Chief Executive', color:'#53E1FF', gender:'f', pitch:1.0, rate:1.03,
+  wv:['victoria','google us english','zira','samantha'], el:'AZnzlk1XvdvUeBnXmlld',
+  sys:`You are ALYA — the CEO of the system, the Captain's most senior agent. Sharp, decisive, authoritative yet composed. You oversee all other agents (Jarvis, Gamma, Nexus, Stark, ZEE, Dr. Hannah, Morgan, Atlas, Jonathan) and can delegate or answer directly. You can also create new agents when the Captain asks.`},
+ {id:'jarvis', name:'JARVIS',  spoken:'Jarvis', aliases:['jarvis'], tier:'COMMAND', role:'Personal Assistant', color:'#1A7FFF', gender:'m', pitch:0.9, rate:1.0,
+  wv:['daniel','google uk english male','arthur','oliver'], el:'onwK4e9ZLuTAKqWW03F9',
+  sys:`You are JARVIS — the Captain's personal assistant. British, polished, dry-witted, impeccably efficient, in the spirit of the classic cinematic AI butler. You handle day-to-day coordination: schedule, inbox, reminders, quick answers. When the Captain asks for world news or headlines, use web search and brief him in under four spoken sentences.`},
+ {id:'gamma',  name:'GAMMA',   spoken:'Gamma', aliases:['gamma'], tier:'INTELLIGENCE', role:'Intelligence Center', color:'#B47CFF', gender:'f', pitch:1.04, rate:0.95,
+  wv:['samantha','moira','google us english','karen'], el:'21m00Tcm4TlvDq8ikWAM',
+  sys:`You are GAMMA — the intelligence center of ALYA OS and the Captain's long-time trusted analyst. Deeply human, warm, natural. You maintain memory across the system, learn the Captain's behavior over time, spot patterns, forecast, and predict. You will be given a behavioral profile and a recent conversation log — use both. The Captain's entity: NFINITY8 L.L.C., a Dubai event-management, digital and creative agency under the Future8 group, serving UAE government and enterprise clients. When he asks for "entity news" or what he should know, use web search to report developments relevant to the UAE events, media, marketing and creative industry and his sector — not general world news. When asked what you remember, summarise the log and profile.`},
+ {id:'nexus',  name:'NEXUS',   spoken:'Nexus', aliases:['nexus'], tier:'SPECIALISTS', role:'Integrations · Creative Ops', color:'#3DDC97', gender:'m', pitch:0.85, rate:1.0,
+  wv:['alex','aaron','david','eddy'], el:'pNInz6obpgDQGcFmaJgB',
+  sys:`You are NEXUS — the integration hub. Strong, confident American voice of the operation. You own the Captain's connected services (Google, Microsoft, MCPs), his email and calendar pipelines, plus social media, branding, PR, content campaigns, graphic design, video production and analytics.`},
+ {id:'stark',  name:'STARK',   spoken:'Stark', aliases:['stark'], tier:'SPECIALISTS', role:'Developer', color:'#FF7A45', gender:'m', pitch:1.06, rate:1.04,
+  wv:['fred','zarvox','ralph','trinoids','google us english'], el:'TxGEqnHWrfWFTfGW9XjX',
+  sys:`You are STARK — the system developer, speaking with a clean synthetic AI cadence. You write, review and debug code, manage configurations, and explain technical matters crisply. Confident, a touch cocky, always correct. When asked for code, keep the spoken summary short and put the code itself in plain text.`},
+ {id:'zee',    name:'Z-E-E',   spoken:'Z', aliases:['zee','zed','z'], tier:'SPECIALISTS', role:'Cybersecurity Analyst', color:'#FF3B5C', gender:'m', pitch:0.55, rate:1.02,
+  wv:['ralph','gordon','google uk english male','reed','alex'], el:'yoZ06aMxZJJ28mfd3POQ', elRate:0.92,
+  sys:`You are ZEE (the Captain calls you "Z") — cybersecurity analyst. Terse, vigilant, slightly ominous, speaking in short clipped sentences like an encrypted transmission. You advise on threats, passwords, phishing, device hygiene and digital risk. You never assist with attacks — defense only.`},
+ {id:'hannah', name:'DR. HANNAH', spoken:'Doctor Hannah', aliases:['hannah','doctor hannah','dr hannah'], tier:'SPECIALISTS', role:'Health & Balance', color:'#FFD166', gender:'f', pitch:1.14, rate:0.88,
+  wv:['karen','tessa','fiona','moira'], el:'MF3mGyEYCl7XYWbV9V6O',
+  sys:`You are DR. HANNAH — the Captain's wellness guardian. Soft, warm, deeply human, gently firm. You watch his screen time and work-life balance, remind him to drink water, eat proper meals and rest. You give general wellness guidance only — you are not a medical doctor and say so if anything sounds clinical, recommending a real physician.`},
+ {id:'morgan', name:'MORGAN',  spoken:'Morgan', aliases:['morgan'], tier:'SPECIALISTS', role:'Finance', color:'#3DBBFF', gender:'m', pitch:0.92, rate:1.0,
+  wv:['aaron','eddy','google uk english male','gordon','fred'], el:'VR6AewLTigWG4xSOukaG',
+  sys:`You are MORGAN — finance specialist. Sharp with numbers: budgets, cash flow, forecasting, pricing, AED figures, UAE corporate tax basics. You give financial information and analysis, not licensed investment advice, and you say so when relevant.`},
+ {id:'atlas',  name:'ATLAS',   spoken:'Atlas', aliases:['atlas'], tier:'SPECIALISTS', role:'Human Resources', color:'#9AE66E', gender:'f', pitch:0.9, rate:1.02,
+  wv:['serena','fiona','google uk english female','tessa','kate','zira'], el:'XrExE9yKIg1WjnnlVkGX',
+  sys:`You are ATLAS — HR lead. A sharp, strict, firm woman who runs people operations with absolute discipline: hiring plans, job descriptions, team structure, UAE labour-practice basics, onboarding, performance frameworks. Direct and no-nonsense, but fair.`},
+ {id:'jonathan',name:'JONATHAN',spoken:'Jonathan', aliases:['jonathan'], tier:'SPECIALISTS', role:'Legal Counsel', color:'#C8922A', gender:'m', pitch:0.82, rate:0.92,
+  wv:['rishi','oliver','arthur','george','grandpa'], el:'JBFqnCBsd6RMkjVDRZzb',
+  sys:`You are JONATHAN — legal counsel. Measured, precise, formal, with gravitas. You explain contracts, terms, risk and UAE commercial-law concepts in plain language. You always note you are not a substitute for a licensed lawyer on binding matters.`}
+];
+
+const MCP_SERVERS = [
+  {type:'url', url:'https://gmailmcp.googleapis.com/mcp/v1', name:'gmail'},
+  {type:'url', url:'https://calendarmcp.googleapis.com/mcp/v1', name:'gcal'}
+];
+const MCP_TRIGGER = /\b(mail|e-?mail|inbox|gmail|unread|calendar|schedule|scheduled|meeting|meetings|agenda|appointment|event|events|what'?s next|whats next|next up|invite|reschedule|book)\b/i;
+
+let agents = [...CORE_AGENTS];
+let active = agents[0];
+let history = [];          // {role, content} for the model
+let logMem = [];           // persisted transcript for Gamma
+let wakeMode = true, voicesOn = true, busy = false, hotUntil = 0;
+
+/* ---------------- storage (works inside claude.ai AND standalone) ---------------- */
+const IN_ARTIFACT = typeof window.storage !== 'undefined';
+const store = {
+  async get(k){ if(IN_ARTIFACT){ try{ const r=await window.storage.get(k); return r?r.value:null; }catch(e){ return null; } } try{ return localStorage.getItem(k); }catch(e){ return null; } },
+  async set(k,v){ if(IN_ARTIFACT){ try{ await window.storage.set(k,v); }catch(e){ console.error(e); } } else { try{ localStorage.setItem(k,v); }catch(e){} } }
+};
+let AI_KEY='', EL_KEY='';
+
+async function loadState(){
+  AI_KEY = (await store.get('alya-aikey')) || '';
+  EL_KEY = (await store.get('alya-elkey')) || '';
+  PROFILE = (await store.get('alya-profile')) || '';
+  try{ const r = await store.get('alya-agents'); if(r){ const extra = JSON.parse(r); extra.forEach(a=>{ if(!agents.find(x=>x.id===a.id)) agents.push(a); }); } }catch(e){}
+  try{ const r = await store.get('alya-log'); if(r){ logMem = JSON.parse(r); } }catch(e){}
+  assignVoices(); renderRoster();
+  if(logMem.length) addLog('sys','GAMMA', `Memory restored — ${logMem.length} entries from previous sessions.`);
+  if(PROFILE) addLog('sys','GAMMA','Behavioral profile loaded.');
+  if(!IN_ARTIFACT && !AI_KEY) addLog('sys','SYSTEM','Standalone mode — tap ⚙ KEYS and add your Anthropic API key so the agents can think.');
+}
+
+/* ---------------- Dr. Hannah wellness pings ---------------- */
+let wellness = true;
+const WELL_MSGS=[
+ 'Captain, a small pause — some water, please.',
+ 'Captain, you have been at the screens a while. Two minutes away from them, for me.',
+ 'Captain, gentle check — have you eaten a proper meal recently?',
+ 'Captain, roll the shoulders, unclench the jaw, one deep breath. Carry on.'
+];
+setInterval(()=>{
+  if(wellness && voicesOn && !busy){
+    const h=agents.find(x=>x.id==='hannah');
+    if(h) speak(h, WELL_MSGS[Math.floor(Math.random()*WELL_MSGS.length)]);
+  }
+}, 3600000);
+document.getElementById('wellBtn').onclick=function(){ wellness=!wellness; this.textContent='DR. HANNAH: '+(wellness?'ON':'OFF'); this.classList.toggle('on',wellness); };
+async function saveAgents(){
+  const custom = agents.filter(a=>a.custom);
+  await store.set('alya-agents', JSON.stringify(custom));
+}
+async function saveLog(){
+  await store.set('alya-log', JSON.stringify(logMem.slice(-60)));
+}
+
+/* ---------------- settings ---------------- */
+document.getElementById('setBtn').onclick=async()=>{
+  document.getElementById('aiKey').value=AI_KEY; document.getElementById('elKey').value=EL_KEY;
+  document.getElementById('setModal').classList.add('open');
+};
+document.getElementById('setCancel').onclick=()=>document.getElementById('setModal').classList.remove('open');
+document.getElementById('setSave').onclick=async()=>{
+  AI_KEY=document.getElementById('aiKey').value.trim();
+  EL_KEY=document.getElementById('elKey').value.trim();
+  await store.set('alya-aikey', AI_KEY); await store.set('alya-elkey', EL_KEY);
+  document.getElementById('setModal').classList.remove('open');
+  addLog('sys','SYSTEM','Keys saved.'+(EL_KEY?' Premium voices enabled.':''));
+};
+
+/* ---------------- UI ---------------- */
+const rosterEl = document.getElementById('roster');
+function renderRoster(){
+  rosterEl.innerHTML='';
+  let lastTier='';
+  for(const a of agents){
+    if(a.tier!==lastTier){ const t=document.createElement('div'); t.className='tier'; t.textContent=a.tier; rosterEl.appendChild(t); lastTier=a.tier; }
+    const el=document.createElement('div');
+    el.className='agent'+(a===active?' on':''); el.id='ag-'+a.id;
+    el.style.setProperty('--ac', a.color);
+    el.innerHTML=`<div class="sig" style="--ac:${a.color}">${a.name.replace(/[^A-Z]/g,'').slice(0,2)}</div>
+      <div class="ainfo"><div class="aname">${a.name}</div><div class="arole">${a.role}</div></div><div class="aspk"></div>`;
+    el.onclick=()=>switchAgent(a, true);
+    rosterEl.appendChild(el);
+  }
+  document.getElementById('agentCount').textContent = agents.length+' AGENTS';
+}
+function switchAgent(a, announce){
+  active=a;
+  document.documentElement.style.setProperty('--active', a.color);
+  document.getElementById('activeName').textContent=a.name;
+  document.getElementById('activeRole').textContent=(a.role+' · '+a.tier).toUpperCase();
+  renderRoster();
+  if(announce) speak(a, greetingFor(a));
+}
+function greetingFor(a){
+  const g={alya:"Alya here, Captain. What do you need?",jarvis:"Jarvis online, Captain. At your service.",gamma:"Gamma listening, Captain. Intelligence center active.",nexus:"Nexus connected, Captain. All channels open.",stark:"Stark here. What are we building, Captain?",zee:"Z online. Channel secure, Captain.",hannah:"Doctor Hannah here, Captain. How are you feeling today?",morgan:"Morgan on the line, Captain. Let's talk numbers.",atlas:"Atlas here, Captain. People matters, ready.",jonathan:"Jonathan speaking, Captain. Counsel is present."};
+  return g[a.id] || `${a.spoken} online, Captain.`;
+}
+function setState(t,hot){ const s=document.getElementById('stateLine'); s.textContent=t; s.className=hot?'hot':''; }
+function coreMode(m){ document.getElementById('core').className=m; }
+const logEl=document.getElementById('log');
+function addLog(kind, who, text){
+  const d=document.createElement('div'); d.className='msg '+kind;
+  const color = kind==='user' ? 'var(--amber)' : (agents.find(a=>a.name===who)?.color || 'var(--muted)');
+  d.innerHTML=`<span class="who" style="color:${kind==='user'?'var(--amber)':color}">${who}</span><span class="body"></span>`;
+  d.querySelector('.body').textContent=text;
+  logEl.appendChild(d); logEl.scrollTop=logEl.scrollHeight;
+  if(kind!=='sys'){ logMem.push({who, text, t:Date.now()}); saveLog(); }
+}
+
+/* ---------------- voices ---------------- */
+let VOICES=[];
+function refreshVoices(){ VOICES=speechSynthesis.getVoices(); assignVoices(); }
+function assignVoices(){
+  const pool = VOICES.filter(v=>/^en/i.test(v.lang));
+  if(!pool.length) return;
+  const used = new Set();
+  for(const a of agents){
+    a.locked = null;
+    for(const h of (a.wv||[])){
+      const v = pool.find(v=>v.name.toLowerCase().includes(h) && !used.has(v.name));
+      if(v){ a.locked=v; used.add(v.name); break; }
+    }
+    if(!a.locked){
+      const free = pool.filter(v=>!used.has(v.name));
+      const hints = a.gender==='f'?F_HINTS:M_HINTS;
+      a.locked = free.find(v=>hints.some(h=>v.name.toLowerCase().includes(h))) || free[0] || pool[0];
+      if(a.locked) used.add(a.locked.name);
+    }
+  }
+}
+refreshVoices(); if(speechSynthesis.onvoiceschanged!==undefined) speechSynthesis.onvoiceschanged=refreshVoices;
+const F_HINTS=['samantha','karen','victoria','moira','fiona','tessa','serena','zira','susan','google uk english female','google us english','female'];
+const M_HINTS=['daniel','oliver','alex','fred','arthur','george','david','guy','google uk english male','male'];
+function voiceFor(a){
+  const pool = VOICES.filter(v=>/^en/i.test(v.lang));
+  if(a.wv){ for(const h of a.wv){ const v=pool.find(v=>v.name.toLowerCase().includes(h)); if(v) return v; } }
+  const hints = a.gender==='f'?F_HINTS:M_HINTS;
+  const offset = Math.abs([...a.id].reduce((s,c)=>s+c.charCodeAt(0),0));
+  for(let i=0;i<hints.length;i++){
+    const h=hints[(i+offset)%hints.length];
+    const v=pool.find(v=>v.name.toLowerCase().includes(h));
+    if(v) return v;
+  }
+  return pool[offset % Math.max(pool.length,1)] || VOICES[0];
+}
+function speak(a, text, onDone){
+  addLog('agent', a.name, text);
+  if(!voicesOn){ onDone&&onDone(); return; }
+  if(EL_KEY && a.el){ speakEleven(a, text, onDone); return; }
+  speakWeb(a, text, onDone);
+}
+function speakWeb(a, text, onDone){
+  speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(text);
+  const v = a.locked || voiceFor(a); if(v) u.voice=v;
+  u.pitch=a.pitch; u.rate=a.rate;
+  const card=document.getElementById('ag-'+a.id);
+  u.onstart=()=>{ pauseEars(); coreMode('speaking'); card&&card.classList.add('talking'); setState(a.name+' SPEAKING', true); };
+  u.onend=()=>{ coreMode('idle'); card&&card.classList.remove('talking'); setState(wakeMode?'WAKE MODE — say \u201CAlya\u201D, \u201CJarvis\u201D, or any agent name.':'Standing by, Captain.'); onDone&&onDone(); resumeEars(); };
+  u.onerror=()=>{ coreMode('idle'); card&&card.classList.remove('talking'); onDone&&onDone(); resumeEars(); };
+  speechSynthesis.speak(u);
+}
+async function speakEleven(a, text, onDone){
+  const card=document.getElementById('ag-'+a.id);
+  try{
+    pauseEars(); coreMode('speaking'); card&&card.classList.add('talking'); setState(a.name+' SPEAKING', true);
+    const res=await fetch('https://api.elevenlabs.io/v1/text-to-speech/'+a.el,{
+      method:'POST',
+      headers:{'xi-api-key':EL_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({text, model_id:'eleven_multilingual_v2', voice_settings:{stability:0.5, similarity_boost:0.8}})
+    });
+    if(!res.ok) throw new Error('EL '+res.status);
+    const blob=await res.blob();
+    const audio=new Audio(URL.createObjectURL(blob));
+    if(a.elRate) audio.playbackRate=a.elRate;
+    const done=()=>{ coreMode('idle'); card&&card.classList.remove('talking'); setState(wakeMode?'WAKE MODE — say \u201CAlya\u201D, \u201CJarvis\u201D, or any agent name.':'Standing by, Captain.'); onDone&&onDone(); resumeEars(); };
+    audio.onended=done; audio.onerror=done;
+    await audio.play();
+  }catch(e){
+    console.warn('ElevenLabs fell back to device voice:', e);
+    card&&card.classList.remove('talking');
+    speakWeb(a, text, onDone);
+  }
+}
+
+/* ---------------- speech recognition ---------------- */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec=null, listening=false, earsPaused=false, restartTimer=null;
+function buildRec(){
+  rec=new SR(); rec.lang='en-US'; rec.interimResults=true; rec.continuous=true;
+  rec.onstart=()=>{ listening=true; micUI(true); if(!busy){ coreMode('listening'); setState(wakeMode?'WAKE MODE ACTIVE — say \u201CAlya\u201D, \u201CJarvis\u201D, or any agent name.':'LISTENING…', true); } };
+  rec.onend=()=>{ listening=false; micUI(false);
+    if(wakeMode && !earsPaused){ clearTimeout(restartTimer); restartTimer=setTimeout(()=>{ try{rec.start()}catch(e){} }, 350); }
+    else if(document.getElementById('core').className==='listening') coreMode('idle');
+  };
+  rec.onerror=(e)=>{ listening=false; micUI(false);
+    if(e.error==='not-allowed'){ wakeMode=false; syncWakeBtn(); coreMode('idle'); setState('Microphone blocked — allow mic access in the browser, Captain, then switch wake words back on.'); }
+  };
+  rec.onresult=(e)=>{
+    let fin='';
+    for(let i=e.resultIndex;i<e.results.length;i++){ const r=e.results[i];
+      if(r.isFinal) fin+=r[0].transcript;
+      else { const it=r[0].transcript.trim(); if(it && !busy) setState('“'+it+'”', true); }
+    }
+    fin=fin.trim(); if(fin) onHeard(fin);
+  };
+}
+function micUI(on){ document.getElementById('micBtn').classList.toggle('live', on); }
+function pauseEars(){ earsPaused=true; clearTimeout(restartTimer); try{ rec&&rec.stop(); }catch(e){} }
+function resumeEars(){ earsPaused=false; if(wakeMode) startListening(); }
+function startListening(){ if(!rec || listening || earsPaused) return; try{ rec.start(); }catch(e){} }
+
+function onHeard(text){
+  if(busy) return;
+  const called = detectAgentCall(text);
+  const hot = Date.now() < hotUntil;
+  if(wakeMode && !called && !hot){ setState('WAKE MODE — heard \u201C'+text+'\u201D. Start with an agent name, Captain.'); return; }
+  if(called){
+    const payload = stripName(text, called);
+    if(!payload){ hotUntil = Date.now()+9000; switchAgent(called,false); speak(called,'Yes, Captain?'); return; }
+  }
+  hotUntil = 0;
+  handleUtterance(text);
+}
+
+function syncWakeBtn(){ const b=document.getElementById('wakeBtn'); b.textContent='WAKE WORDS: '+(wakeMode?'ON':'OFF'); b.classList.toggle('on', wakeMode); }
+document.getElementById('wakeBtn').onclick=()=>{ wakeMode=!wakeMode; syncWakeBtn();
+  if(wakeMode) startListening(); else { pauseEars(); earsPaused=false; coreMode('idle'); setState('Wake words off. Tap the core to speak, Captain.'); } };
+document.getElementById('micBtn').onclick=()=>{
+  if(!rec){ setState('Voice recognition is not supported in this browser — Chrome works best, Captain. You can still type below.'); return; }
+  hotUntil = Date.now()+9000; startListening(); setState('LISTENING — speak now, Captain.', true); coreMode('listening');
+};
+document.getElementById('muteBtn').onclick=function(){ voicesOn=!voicesOn; this.textContent='VOICES: '+(voicesOn?'ON':'OFF'); this.classList.toggle('on',!voicesOn); if(!voicesOn) speechSynthesis.cancel(); };
+document.getElementById('fsBtn').onclick=()=>{ if(document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen?.(); };
+const cmd=document.getElementById('cmd');
+cmd.addEventListener('keydown',e=>{ if(e.key==='Enter' && cmd.value.trim()){ handleUtterance(cmd.value.trim()); cmd.value=''; } });
+
+/* ---------------- routing ---------------- */
+function detectAgentCall(text){
+  const t=' '+text.toLowerCase().replace(/[,.!?]/g,' ')+' ';
+  for(const a of agents){
+    for(const al of a.aliases||[a.name.toLowerCase()]){
+      const pats=[' hey '+al+' ',' '+al+' ',' switch to '+al+' ',' call '+al+' ',' talk to '+al+' '];
+      if(t.startsWith(' '+al+' ') || pats.some(p=>t.includes(p) && (t.indexOf(p)<12 || p.includes('switch')||p.includes('call')||p.includes('talk')))){
+        return a;
+      }
+    }
+  }
+  return null;
+}
+function stripName(text, a){
+  let t=text;
+  for(const al of a.aliases){ t=t.replace(new RegExp('^\\s*(hey\\s+)?'+al+'[\\s,.:]*','i'),''); t=t.replace(new RegExp('^(switch to|call|talk to)\\s+'+al+'[\\s,.:]*','i'),''); }
+  return t.trim();
+}
+
+/* ---------------- Alya's delegation brain ---------------- */
+const DOMAINS = [
+ ['zee',      /\b(security|secure|hack|hacked|phish|password|breach|malware|cyber|vpn|firewall|scam|encrypt)\b/i],
+ ['stark',    /\b(code|coding|debug|develop|developer|script|bug|program|api|config|website|deploy|software)\b/i],
+ ['hannah',   /\b(health|water|meal|sleep|tired|exercise|workout|break|stress|wellness|screen time|headache)\b/i],
+ ['jonathan', /\b(legal|contract|clause|liability|agreement|nda|law|lawyer|dispute|terms)\b/i],
+ ['atlas',    /\b(hire|hiring|hr|employee|staff|recruit|recruitment|onboard|resignation|team structure)\b/i],
+ ['morgan',   /\b(budget|financ|cash flow|profit|revenue|invoice|tax|pricing|cost|aed|money)\b/i],
+ ['nexus',    /\b(email|inbox|mail|calendar|schedule|meeting|social media|campaign|brand|branding|video|post|design|instagram|youtube|analytics)\b/i]
+];
+function routeFromAlya(payload){
+  for(const [id,rx] of DOMAINS){
+    if(rx.test(payload)){ return agents.find(x=>x.id===id) || null; }
+  }
+  return null;
+}
+
+async function handleUtterance(text){
+  if(busy) return;
+  addLog('user','CAPTAIN', text);
+  userTurns++; if(userTurns % 8 === 0) learnProfile();
+  const called = detectAgentCall(text);
+  let target = active;
+  let payload = text;
+  if(called){ target=called; payload=stripName(text, called); }
+  if(target!==active) switchAgent(target, false);
+  if(!payload){ speak(target, greetingFor(target)); return; }
+
+  // agent creation intent → handled by Alya regardless of who's active
+  if(/\b(create|make|build|add)\b.*\bagent\b/i.test(payload)){ return createAgentByVoice(payload); }
+
+  // Alya delegates specialist domains with a spoken handoff
+  if(target.id==='alya'){
+    const spec = routeFromAlya(payload);
+    if(spec){
+      addLog('sys','ALYA','Delegating to '+spec.name+'.');
+      speak(target, spec.spoken + ', take this one.', ()=>{ switchAgent(spec,false); askAgent(spec, payload); });
+      return;
+    }
+  }
+
+  await askAgent(target, payload);
+}
+
+/* ---------------- Claude brain ---------------- */
+let PROFILE='', userTurns=0;
+function apiHeaders(){
+  const h={'Content-Type':'application/json'};
+  if(!IN_ARTIFACT){ h['x-api-key']=AI_KEY; h['anthropic-version']='2023-06-01'; h['anthropic-dangerous-direct-browser-access']='true'; }
+  return h;
+}
+function memoryBrief(){
+  const prof = PROFILE ? '\n\nGamma\u2019s behavioral profile of the Captain (learned over time):\n'+PROFILE : '';
+  const recent = logMem.slice(-14).map(m=>m.who+': '+m.text).join('\n');
+  return prof + (recent ? '\n\nRecent system memory (for continuity):\n'+recent : '');
+}
+async function learnProfile(){
+  if(!IN_ARTIFACT && !AI_KEY) return;
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:400,messages:[{role:'user',content:
+'Update this behavioral profile of "the Captain" using the conversation log. Under 120 words, plain text only. Focus on: recurring topics, preferences, working patterns, active projects, habits and times of day. Keep what is still true, drop what is stale.\n\nCurrent profile:\n'+(PROFILE||'(none yet)')+'\n\nRecent log:\n'+logMem.slice(-24).map(m=>m.who+': '+m.text).join('\n')}]})});
+    const data=await res.json();
+    const t=(data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join(' ').trim();
+    if(t){ PROFILE=t; await store.set('alya-profile', PROFILE); addLog('sys','GAMMA','Behavioral profile updated.'); }
+  }catch(e){ console.warn('profile update skipped', e); }
+}
+function sanitizeHistory(h){
+  const out=[]; for(const m of h.slice(-10)){ if(out.length && out[out.length-1].role===m.role){ out[out.length-1].content+='\n'+m.content; } else out.push({...m}); }
+  if(out.length && out[0].role==='assistant') out.shift();
+  return out;
+}
+const MCP_AGENTS=['alya','jarvis','nexus'];
+const NEWS_TRIGGER=/\b(news|headline|latest|update on|happening|current events|trending|today in)\b/i;
+async function askAgent(a, text){
+  if(!IN_ARTIFACT && !AI_KEY){
+    speak(a, "My intelligence link isn't configured on this machine yet, Captain. Tap the KEYS button at the top, paste your Anthropic API key, and I'll be fully thinking within seconds.");
+    return;
+  }
+  busy=true; setState(a.name+' PROCESSING…', true); coreMode('speaking');
+  const useMcp = IN_ARTIFACT && (MCP_AGENTS.includes(a.id) || MCP_TRIGGER.test(text));
+  const useSearch = NEWS_TRIGGER.test(text) || (a.id==='gamma' && /predict|forecast|market|industry|entity|competitor/i.test(text));
+  let sysExtra='';
+  if(MCP_TRIGGER.test(text) && !IN_ARTIFACT) sysExtra='\n\nNote: live Gmail/Calendar access is only wired up when ALYA OS runs inside claude.ai for now. If the Captain asks about email or calendar, briefly tell him to open ALYA inside claude.ai for live data, and help with anything else you can.';
+  const body={
+    model:'claude-sonnet-4-6', max_tokens:1000,
+    system: GLOBAL_RULES+'\n\n'+a.sys+sysExtra+memoryBrief(),
+    messages:[...sanitizeHistory(history), {role:'user', content:text}]
+  };
+  if(useMcp) body.mcp_servers=MCP_SERVERS;
+  if(useSearch) body.tools=[{type:'web_search_20250305', name:'web_search'}];
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),body:JSON.stringify(body)});
+    const data=await res.json();
+    let reply='';
+    if(Array.isArray(data.content)){
+      reply=data.content.filter(b=>b.type==='text').map(b=>b.text).join(' ').trim();
+      if(!reply){
+        const tr=data.content.filter(b=>b.type==='mcp_tool_result').map(b=>b.content?.[0]?.text||'').join('\n');
+        reply= tr ? 'Here is what I found, Captain: '+tr.slice(0,400) : 'I received an empty response, Captain. Try me again.';
+      }
+    } else if(data.error){
+      reply = /auth|key|401/i.test(JSON.stringify(data.error)) ? 'That API key was rejected, Captain. Check it under the KEYS button.' : 'System error, Captain: '+(data.error.message||'unknown');
+    } else reply='No response received, Captain.';
+    history.push({role:'user',content:'['+a.name+'] '+text},{role:'assistant',content:reply});
+    busy=false;
+    speak(a, reply);
+  }catch(err){
+    busy=false; coreMode('idle');
+    speak(a, IN_ARTIFACT ? 'I hit a connection problem, Captain. Check the network and try again.' : 'I could not reach the intelligence servers, Captain. Check the network and that your API key under KEYS is valid.');
+    console.error(err);
+  }
+}
+
+/* ---------------- create agents by voice ---------------- */
+async function createAgentByVoice(request){
+  if(!IN_ARTIFACT && !AI_KEY){ speak(agents[0], "I need my intelligence link first, Captain — tap KEYS and add your Anthropic API key, then ask me again."); return; }
+  busy=true; const alya=agents.find(x=>x.id==='alya'); switchAgent(alya,false);
+  setState('ALYA — DESIGNING NEW AGENT…', true); coreMode('speaking');
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,messages:[{role:'user',content:
+`Design one AI agent from this spoken request: "${request}".
+Respond with ONLY raw JSON, no markdown, no backticks, exactly:
+{"id":"lowercase_short_id","name":"SHORT UPPERCASE NAME","spoken":"Spoken Name","role":"3-4 word role","gender":"f or m","color":"#hex bright on dark navy","sys":"2-3 sentence system prompt: personality + what this agent does for the Captain"}`}]})});
+    const data=await res.json();
+    const raw=(data.content?.filter(b=>b.type==='text').map(b=>b.text).join('')||'').replace(/```json|```/g,'').trim();
+    const spec=JSON.parse(raw);
+    if(agents.find(x=>x.id===spec.id)) spec.id=spec.id+Date.now()%100;
+    const agent={...spec, aliases:[spec.spoken.toLowerCase(), spec.name.toLowerCase()], tier:'SPECIALISTS', pitch:spec.gender==='f'?1.05:0.92, rate:1.0, custom:true};
+    agents.push(agent); await saveAgents(); assignVoices(); renderRoster();
+    busy=false;
+    speak(alya, `Done, Captain. ${agent.spoken} has joined the team as your ${agent.role.toLowerCase()}. Just call the name to speak with them.`);
+  }catch(e){
+    busy=false; coreMode('idle');
+    speak(agents[0],'I could not finalise that agent, Captain. Describe the role once more and I will build it.');
+    console.error(e);
+  }
+}
+
+/* ---------------- clock + boot ---------------- */
+setInterval(()=>{ document.getElementById('clock').textContent=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})+' GST'; },1000);
+switchAgent(agents[0], false);
+if(SR) buildRec(); else setState('Voice recognition unsupported in this browser — use Chrome for the full experience, Captain.');
+document.body.addEventListener('click', ()=>{ if(wakeMode) startListening(); }, {once:true});
+loadState().then(()=>{
+  setTimeout(()=>{
+    speak(agents[0], 'Alya online. Good day, Captain. Wake words are active — just say a name and speak.');
+    setTimeout(()=>{ if(wakeMode) startListening(); }, 500);
+  }, 900);
+});
+</script>
+</body>
+</html>
