@@ -173,7 +173,7 @@
 </div>
 <div id="app">
   <header>
-    <div class="brand"><h1>ALYA</h1><small>OPERATING SYSTEM · v3.8 LOCAL CONTROL</small></div>
+    <div class="brand"><h1>ALYA</h1><small>OPERATING SYSTEM · v4.1 ECOSYSTEM</small></div>
     <div class="hstat mono">
       <span><span class="dot"></span>ONLINE</span>
       <span id="clock">--:--</span>
@@ -252,14 +252,16 @@ const GLOBAL_RULES = `You are one agent inside "ALYA OS", a private multi-agent 
 
 NO THEATER: You have no background tasks and no ability to wait. You CANNOT "check with", "wait for", "follow up with" or "call in" another agent yourself — only the system can relay, and the other agent's reply arrives as its own spoken turn. NEVER simulate, quote, announce, or wait for another agent's response, and never claim an agent is offline or unresponsive. This holds EVEN IF Sir instructs a timeout or ping protocol — you physically cannot ping, count seconds, or reboot anything; politely explain the system relays for you, and never narrate lines like \u201Cfive seconds, no response, moving on\u201D. If a request belongs elsewhere, answer what you can and tell Sir he may say the agent's name to bring them in.
 
+SYSTEM CONTROL: ALYA OS has a working local daemon on Sir's Mac. Any agent can open and close apps, open files and folders, list directories, adjust volume, lock the screen and take screenshots — the system executes these instantly when Sir asks. NEVER say this is unavailable, "in development", or another agent's project.
+
 TRUE ROSTER (never misstate these): Jarvis — personal assistant, daily operations; Gamma — intelligence center, memory & forecasting; Nexus — integrations, email & calendar, creative and social; Stark — developer; ZEE — cybersecurity; Dr. Hannah — health & wellness; Morgan — finance; Atlas — human resources; Jonathan — legal counsel. Your replies are spoken aloud by text-to-speech, so keep them SHORT and natural — 1 to 3 spoken sentences unless Sir explicitly asks for detail. Never use markdown, bullets, or emojis.
 
 ABSOLUTE RULE — NEVER DROP THE SIR'S QUESTION: you must always either (a) answer it directly to the best of your ability, or (b) ask him ONE short clarifying question. Never refuse, never deflect, never reply that another agent should handle it instead of answering. If the topic is another agent's specialty, still give your best brief answer first, then you may add that the specialist can go deeper.
 
-BE FULLY CONVERSATIONAL: hold the thread of the dialogue. When the Doctor gives a short confirmation like "done", "yes", "I did it", or reports completing something you asked for, acknowledge it and continue naturally from where the conversation was — react to it, verify it, or take the next step. Ask brief follow-up questions when genuinely useful. Current date: ${new Date().toDateString()}.`;
+SHARED ECOSYSTEM: ALYA OS is one team with one shared memory. Every agent sees the FULL transcript of every conversation Sir has with any agent, plus the specialist files the team keeps. You are never out of the loop. If Sir asks you to pick up or continue a task another agent was handling, read the transcript and DO IT yourself — never ask another agent what the task was, and never say you have no record. If Sir asks what he said or asked earlier, look there and answer from it; never claim you have no record without checking, and never ask another agent to recall it for you.\n\nBE FULLY CONVERSATIONAL: hold the thread of the dialogue. When the Doctor gives a short confirmation like "done", "yes", "I did it", or reports completing something you asked for, acknowledge it and continue naturally from where the conversation was — react to it, verify it, or take the next step. Ask brief follow-up questions when genuinely useful. Current date: ${new Date().toDateString()}.`;
 
 const CORE_AGENTS = [
- {id:'alya',   name:'ALYA',    spoken:'Alya', aliases:['alya','alia','aaliyah','aliyah','aliya','alyah','aleah','alea','allya','allure'], tier:'COMMAND', role:'Chief Executive', color:'#53E1FF', gender:'f', pitch:1.0, rate:1.03,
+ {id:'alya',   name:'ALYA',    spoken:'Alya', aliases:['alya','alia','aaliyah','aliyah','aliya','alyah','aleah','alea','allya','allure','arya','aria','dalia','talia','olia'], tier:'COMMAND', role:'Chief Executive', color:'#53E1FF', gender:'f', pitch:1.0, rate:1.03,
   wv:['victoria','google us english','zira','samantha'], el:'AZnzlk1XvdvUeBnXmlld',
   sys:`You are ALYA — the CEO of the system, the Doctor's most senior agent. Sharp, decisive, authoritative yet composed. You oversee all other agents (Jarvis, Gamma, Nexus, Stark, ZEE, Dr. Hannah, Morgan, Atlas, Jonathan) and can delegate or answer directly. You can also create new agents when the Doctor asks.`},
  {id:'jarvis', name:'JARVIS',  spoken:'Jarvis', aliases:['jarvis','jarves','jervis','travis'], tier:'COMMAND', role:'Personal Assistant', color:'#1A7FFF', gender:'m', pitch:0.9, rate:1.0,
@@ -318,6 +320,7 @@ async function loadState(){
   SYS_KEY = (await store.get('alya-syskey')) || '';
   probeDaemon();
   PROFILE = (await store.get('alya-profile')) || '';
+  try{ const dl=await store.get('alya-domainlog'); if(dl) Object.assign(DOMAIN_LOG, JSON.parse(dl)); }catch(e){}
   try{ const r = await store.get('alya-agents'); if(r){ const extra = JSON.parse(r); extra.forEach(a=>{ if(!agents.find(x=>x.id===a.id)) agents.push(a); }); } }catch(e){}
   try{ const r = await store.get('alya-log'); if(r){ logMem = JSON.parse(r); } }catch(e){}
   assignVoices(); renderRoster();
@@ -655,13 +658,21 @@ function resumeEars(){ earsPaused=false; graceUntil=Date.now()+700; pendBuf=''; 
 function startListening(){ if(earsEngine==='pro') return; if(!rec || listening || earsPaused) return; try{ rec.start(); }catch(e){} }
 
 function flushQueue(){ if(queued && !busy){ const q=queued; queued=null; onHeard(q); } }
+const CMD_RX=/\b(open|launch|close|quit|mute|unmute|volume|lock|screenshot|reveal|stop|list|go to|navigate)\b/i;
 function isClutter(t){
   if(Date.now()<hotUntil) return false;
   if(detectAgentCall(t)) return false;
+  if(CMD_RX.test(t)) return false;
   return t.trim().split(/\s+/).length < 3;
 }
-function onHeard(text){
+async function onHeard(text){
   if(/^(stop|cancel|quiet|enough|silence|shut up)[.!]?$/i.test(text.trim())){ stopSpeaking(); queued=null; setState('Silenced, Sir.'); return; }
+  if(!busy){
+    setState('\u2026', true);
+    const refined = await refineTranscript(text);
+    if(refined===null){ setState(wakeMode?'WAKE MODE — listening.':'Standing by, Sir.'); return; }
+    text = refined;
+  }
   if(isClutter(text)){ addLog('sys','MIC','Filtered room noise: \u201C'+text+'\u201D'); return; }
   if(busy){ queued=text; setState('QUEUED — one moment, Sir: \u201C'+text+'\u201D', true); addLog('sys','MIC','Queued while processing: \u201C'+text+'\u201D'); return; }
   const called = detectAgentCall(text);
@@ -695,6 +706,15 @@ const cmd=document.getElementById('cmd');
 cmd.addEventListener('keydown',e=>{ if(e.key==='Enter' && cmd.value.trim()){ handleUtterance(cmd.value.trim()); cmd.value=''; } });
 
 /* ---------------- routing ---------------- */
+const KNOWN_NAME_RX=/^\s*([a-z]{3,10})\s*[,:]/i;
+function unknownNameToAlya(text){
+  const m=text.match(KNOWN_NAME_RX);
+  if(!m) return null;
+  const w=m[1].toLowerCase();
+  for(const a of agents){ if((a.aliases||[]).some(al=>al===w)) return null; }
+  if(/^(sir|yes|no|okay|ok|well|so|and|but|hey|hi|hello|thanks|thank|please|now|also|first|finally)$/.test(w)) return null;
+  return agents[0];
+}
 function detectAgentCall(text){
   const t=(' '+text.toLowerCase().replace(/[,.!?]/g,' ')+' ').replace(/\s+/g,' ');
   for(const a of agents){
@@ -784,6 +804,7 @@ async function relayAsk(relayer, spec, payload){
   addLog('sys',relayer.name,'\u2192 '+spec.name);
   if(nextRelayStep){ relayChain.unshift({spec:nextRelayStep.spec, payload:nextRelayStep.payload}); }
   nextRelayStep={relayer:relayer, spec:spec, payload:payload};
+  nextRelayStep.line=line;
   speak(relayer, line, fireRelayStep);
 }
 
@@ -792,7 +813,7 @@ function fireRelayStep(){
   if(!nextRelayStep) return;
   const st=nextRelayStep; nextRelayStep=null;
   switchAgent(st.spec,false);
-  askAgent(st.spec, st.payload, {relayFrom:st.relayer});
+  askAgent(st.spec, st.payload, {relayFrom:st.relayer, relayLine:st.line});
 }
 function resumePending(){
   if(busy || queued || pendingReadback) return;
@@ -801,6 +822,28 @@ function resumePending(){
   if(relayChain.length && currentRelayer){ const j=relayChain.shift(); relayAsk(currentRelayer, j.spec, j.payload); }
 }
 let SYS_GEO=null, geoTried=false;
+const DOMAIN_LOG={};
+const DOMAIN_RX=[
+  ['hannah',   /\b(health|water|meal|ate|eat|sleep|slept|tired|rest|exercise|workout|stress|sick|pain|screen time)\b/i],
+  ['zee',      /\b(security|breach|hack|phish|password|malware|threat|vpn|firewall|scam|encrypt)\b/i],
+  ['morgan',   /\b(budget|finance|financial|cash|profit|revenue|invoice|tax|pricing|cost|aed|payment|salary)\b/i],
+  ['jonathan', /\b(legal|contract|clause|liability|agreement|nda|law|dispute|terms)\b/i],
+  ['atlas',    /\b(hire|hiring|hr|employee|staff|recruit|onboard|resignation)\b/i],
+  ['stark',    /\b(code|coding|debug|develop|bug|api|deploy|software|repo)\b/i],
+  ['nexus',    /\b(email|inbox|calendar|meeting|social media|campaign|brand|video|post|design|analytics)\b/i]
+];
+async function crossLog(text){
+  for(const [id,rx] of DOMAIN_RX){
+    if(rx.test(text)){
+      if(!DOMAIN_LOG[id]) DOMAIN_LOG[id]=[];
+      DOMAIN_LOG[id].push(new Date().toLocaleDateString()+': '+text.slice(0,160));
+      DOMAIN_LOG[id]=DOMAIN_LOG[id].slice(-12);
+      const ag=agents.find(a=>a.id===id);
+      if(ag) addLog('sys','SYSTEM','Logged to '+ag.name+'\u2019s file.');
+      try{ await store.set('alya-domainlog', JSON.stringify(DOMAIN_LOG)); }catch(e){}
+    }
+  }
+}
 async function ensureGeo(){
   if(SYS_GEO || geoTried) return; geoTried=true;
   try{ const g=await (await fetch('https://ipapi.co/json/')).json();
@@ -835,11 +878,13 @@ async function handleUtterance(text){
     }
     pendingReadback=null;
   }
+  crossLog(text);
   userTurns++; if(userTurns % 8 === 0) learnProfile();
-  const called = detectAgentCall(text);
-  let target = active;
-  let payload = text;
-  if(called){ target=called; payload=stripName(text, called); }
+  let called = detectAgentCall(text);
+  if(!called){ const guess=unknownNameToAlya(text); if(guess){ called=guess; text=text.replace(KNOWN_NAME_RX,'').trim(); addLog('sys','MIC','Unrecognised name — routing to Alya.'); } }
+  let target = called || active;
+  let payload = called ? stripName(text, called) : text;
+  if(called && !payload) payload = text;
   if(target!==active) switchAgent(target, false);
   if(!payload){ speak(target, greetingFor(target)); return; }
 
@@ -884,8 +929,8 @@ async function handleUtterance(text){
 
   // Alya and Jarvis delegate specialist domains with a spoken handoff
   lastAsk = payload;
-  if(target.id==='alya' || target.id==='jarvis'){
-    let spec = routeFromAlya(payload);
+  {
+    let spec = (target.id==='alya'||target.id==='jarvis') ? routeFromAlya(payload) : null;
     if(spec && target.id==='jarvis' && spec.id==='nexus') spec=null; // Jarvis handles email/calendar himself
     const mentioned = agents.filter(x=>x.id!==target.id && (x.aliases||[]).some(al=>new RegExp('\\b'+al+'\\b','i').test(payload)));
     if(mentioned.length>=2){ decomposeChain(target, payload, mentioned); return; }
@@ -995,44 +1040,91 @@ const FOLDERS={desktop:'Desktop',documents:'Documents',downloads:'Downloads',pic
 
 /* returns a spoken result string if the utterance was a system command, else null */
 async function trySystemCommand(text){
-  const t=text.toLowerCase().trim();
-  const m = t.match(/\b(open|launch|start|quit|close|exit|reveal|show|go to|navigate to|list|volume up|volume down|mute|unmute|lock (the )?screen|sleep (the )?(display|screen)|take (a )?screenshot|screenshot)\b(.*)$/);
-  if(!m) return null;
+  let t=text.toLowerCase().trim().replace(/[.!?]+$/,'');
+  t=t.replace(/^(hey\s+)?(alya|alia|jarvis|nexus|stark|gamma|zee|z|morgan|atlas|jonathan|doctor hannah|hannah)[\s,:]+/i,'');
+  t=t.replace(/^(please|could you|can you|would you|i want you to|i'?d like you to)\s+/i,'').trim();
+
+  const SYS={ 'volume up':'volume_up','turn up the volume':'volume_up','louder':'volume_up',
+              'volume down':'volume_down','turn down the volume':'volume_down','quieter':'volume_down',
+              'mute':'mute','unmute':'unmute','lock the screen':'lock_screen','lock screen':'lock_screen',
+              'sleep the display':'sleep_display','sleep the screen':'sleep_display',
+              'take a screenshot':'screenshot','screenshot':'screenshot','take screenshot':'screenshot' };
+  let sysAct=null;
+  for(const k in SYS){ if(t===k || t.startsWith(k+' ') || t.endsWith(' '+k)){ sysAct=SYS[k]; break; } }
+
+  const m = t.match(/^(open|launch|start|run|quit|close|exit|reveal|show me|show|go to|navigate to|list)\s+(.+)$/);
+  if(!sysAct && !m) return null;
+
   if(!SYS_KEY) return "I'd love to, Sir, but system control isn't set up yet. Run the ALYA daemon on your Mac and paste its token into the KEYS panel.";
-  if(!sysOnline){ await probeDaemon(); if(!sysOnline) return "The local control daemon isn't answering, Sir. Please make sure alya daemon is running on your Mac, then try again."; }
-  const verb=m[1], tail=(m[9]||'').replace(/^\s*(the|my|a)\s+/,'').trim();
+  if(!sysOnline){ await probeDaemon(); if(!sysOnline) return "The local control daemon isn't answering, Sir. Please make sure it is running in Terminal, then try again."; }
+
   try{
-    if(/volume up/.test(t))   return (await daemon('system','volume_up')).said;
-    if(/volume down/.test(t)) return (await daemon('system','volume_down')).said;
-    if(/^unmute/.test(t)||/ unmute/.test(t)) return (await daemon('system','unmute')).said;
-    if(/mute/.test(t))        return (await daemon('system','mute')).said;
-    if(/lock/.test(t))        return (await daemon('system','lock_screen')).said;
-    if(/sleep/.test(t))       return (await daemon('system','sleep_display')).said;
-    if(/screenshot/.test(t))  return (await daemon('system','screenshot')).said + ' Saved to your Desktop.';
-    if(/^(quit|close|exit)/.test(verb)){
-      const app=APP_ALIASES[tail]||titleCase(tail);
-      return (await daemon('quit_app', app)).said;
+    if(sysAct){ const d=await daemon('system', sysAct); return d.said + (sysAct==='screenshot' ? ' Saved to your Desktop.' : ''); }
+
+    const verb=m[1];
+    let target=m[2].replace(/^(the|my|a|up|please)\s+/i,'').replace(/\s+(please|for me|now)$/i,'').trim();
+
+    // data requests belong to the agents, not the operating system
+    if(/^(my )?(calendar|schedule|agenda|email|emails|inbox|mail|messages? from|meetings?)\b/.test(target)) return null;
+
+    const key=target.toLowerCase();
+    if(/^(quit|close|exit)$/.test(verb)){
+      const app=APP_ALIASES[key]||titleCase(target);
+      const d=await daemon('quit_app', app); return d.said;
     }
-    if(/^(reveal|show)/.test(verb)){
-      const f=FOLDERS[tail]; return (await daemon('reveal', f||tail)).said;
+    if(/^(reveal|show me|show)$/.test(verb)){
+      const p=FOLDERS[key]||target; const d=await daemon('reveal', p); return d.said;
     }
-    if(/^(go to|navigate to|list)/.test(verb)){
-      const f=FOLDERS[tail]||tail; const d=await daemon('list_dir', f);
-      return d.said + (d.items && d.items.length? ' Top items: '+d.items.slice(0,8).join(', ')+'.' : '');
+    if(/^(go to|navigate to|list)$/.test(verb)){
+      const p=FOLDERS[key]||target; const d=await daemon('list_dir', p);
+      return d.said + (d.items && d.items.length ? ' Top items: '+d.items.slice(0,8).join(', ')+'.' : '');
     }
-    // open / launch / start
-    if(APP_ALIASES[tail]) return (await daemon('open_app', APP_ALIASES[tail])).said;
-    if(FOLDERS[tail])     return (await daemon('open_path', FOLDERS[tail])).said;
-    // "open my calendar/email" → let the normal agents handle data, not the OS
-    if(/calendar|email|inbox|mail|schedule/.test(tail)) return null;
-    // otherwise try as an app name, then as a path
-    try{ return (await daemon('open_app', titleCase(tail))).said; }
-    catch(e){ return (await daemon('open_path', tail)).said; }
+    // open / launch / start / run
+    if(APP_ALIASES[key]){ const d=await daemon('open_app', APP_ALIASES[key]); return d.said; }
+    if(FOLDERS[key]){ const d=await daemon('open_path', FOLDERS[key]); return d.said; }
+    try{ const d=await daemon('open_app', titleCase(target)); return d.said; }
+    catch(e1){
+      try{ const d=await daemon('open_path', target); return d.said; }
+      catch(e2){ return "I could not find an app or file called "+target+", Sir."; }
+    }
   }catch(e){
     return "That didn't go through, Sir — "+e.message+".";
   }
 }
 function titleCase(s){ return s.replace(/\b\w/g,c=>c.toUpperCase()); }
+function similar(a,b){
+  const norm=x=>x.toLowerCase().replace(/[^a-z0-9\s]/g,'').split(/\s+/).filter(w=>w.length>3);
+  const A=norm(a), B=norm(b);
+  if(!A.length||!B.length) return false;
+  const hits=A.filter(w=>B.includes(w)).length;
+  return hits/Math.min(A.length,B.length) > 0.65;
+}
+
+
+/* ============ INTELLIGENT LISTENING ============ */
+async function refineTranscript(raw){
+  if(!IN_ARTIFACT && !AI_KEY) return raw;
+  const names = agents.map(a=>a.spoken).join(', ');
+  const ctx = logMem.slice(-6).map(m=>m.who+': '+m.text).join('\n') || '(start of session)';
+  try{
+    const ctl=new AbortController(); const tmo=setTimeout(()=>ctl.abort(), 4500);
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),signal:ctl.signal,
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:150,system:
+`You clean up voice transcripts for ALYA OS. The only agent names that exist are: ${names}. The speaker is "Sir".
+Return ONLY the corrected transcript, nothing else.
+RULES:
+1. Fix misheard agent names to the correct one ("Charlie"/"Arya"/"Dalia"/"Aaliyah" -> "Alya"; "Travis" -> "Jarvis"; "Kama"/"Gemma" -> "Gamma"; "Xie"/"Zed" -> "Z"; "Nexis" -> "Nexus"; "Mark" -> "Stark" or "Morgan" by context). Never invent a name not on the list.
+2. If the text is background noise, laughter, coughing, music, TV, someone else in the room, or an agent's own words echoing back, return exactly: [NOISE]
+3. Otherwise keep the meaning and wording faithful; fix only obvious mis-transcriptions.`,
+        messages:[{role:'user',content:`Recent conversation:\n${ctx}\n\nRaw transcript: "${raw}"`}]})});
+    clearTimeout(tmo);
+    const d=await r.json();
+    const t=(d.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('').trim();
+    if(!t) return raw;
+    if(/^\[NOISE\]$/i.test(t)) return null;
+    return t.replace(/^["']|["']$/g,'');
+  }catch(e){ return raw; }
+}
 
 /* ---------------- system diagnostics ---------------- */
 async function systemCheck(){
@@ -1074,11 +1166,16 @@ function apiHeaders(){
   if(!IN_ARTIFACT){ h['x-api-key']=AI_KEY; h['anthropic-version']='2023-06-01'; h['anthropic-dangerous-direct-browser-access']='true'; }
   return h;
 }
+function domainNotes(){
+  let out='';
+  for(const k in DOMAIN_LOG){ if(DOMAIN_LOG[k] && DOMAIN_LOG[k].length){ const ag=agents.find(a=>a.id===k); out+='\n['+(ag?ag.spoken:k)+' file] '+DOMAIN_LOG[k].slice(-6).join(' | '); } }
+  return out ? '\n\nSHARED SPECIALIST FILES (logged for Sir across all conversations):'+out : '';
+}
 function memoryBrief(){
   const live = '\n\nLive context: local time is '+new Date().toLocaleString()+(SYS_GEO? '; the Doctor is currently in '+SYS_GEO.city+', '+SYS_GEO.country+' (approximate, via network location; timezone '+SYS_GEO.tz+')':'')+'.';
   const prof = PROFILE ? '\n\nGamma\u2019s behavioral profile of the Doctor (learned over time):\n'+PROFILE : '';
-  const recent = logMem.slice(-14).map(m=>m.who+': '+m.text).join('\n');
-  return live + prof + (recent ? '\n\nRecent system memory (for continuity):\n'+recent : '');
+  const recent = logMem.slice(-30).map(m=>m.who+': '+m.text).join('\n');
+  return live + prof + domainNotes() + (recent ? '\n\nFULL SHARED TRANSCRIPT of this session (every agent sees all of it):\n'+recent : '');
 }
 async function learnProfile(){
   if(!IN_ARTIFACT && !AI_KEY) return;
@@ -1110,7 +1207,7 @@ async function askAgent(a, text, opts={}){
   const drafting = DRAFT_TRIGGER.test(text);
   let sysExtra='';
   if(MCP_TRIGGER.test(text) && !IN_ARTIFACT) sysExtra='\n\nNote: live Gmail/Calendar access is only wired up when ALYA OS runs inside claude.ai for now. If the Doctor asks about email or calendar, briefly tell him to open ALYA inside claude.ai for live data, and help with anything else you can.';
-  if(opts.relayFrom) sysExtra+='\n\nRELAY: '+opts.relayFrom.spoken+' has just asked you this out loud on the Doctor\u2019s behalf. Reply TO '+opts.relayFrom.spoken+', addressing them by name, as a natural spoken report between colleagues (the Doctor is listening in the room). Do NOT address the Doctor directly and do not say the word Sir in this reply.';
+  if(opts.relayFrom) sysExtra+='\n\nRELAY: '+opts.relayFrom.spoken+' has just asked you this out loud on the Doctor\u2019s behalf. Reply TO '+opts.relayFrom.spoken+', addressing them by name, as a natural spoken report between colleagues (the Doctor is listening in the room). Do NOT address the Doctor directly and do not say the word Sir in this reply. NEVER repeat, quote or echo the question you were just asked \u2014 ANSWER it with real substance from your own expertise.';
   if(drafting) sysExtra+='\n\nDRAFTING MODE: The Doctor wants a full document. Ignore the short-reply rule. Open with ONE short spoken sentence, then a line with only "---", then the complete, professional document in plain text (no markdown symbols). Mark it as a draft for review by a licensed professional where appropriate.';
   try{ const knw=await store.get('alya-knw-'+a.id); if(knw) sysExtra+='\n\nThe Doctor\u2019s private files shared with you (treat as confidential, use freely to answer him):\n'+knw.slice(-8000); }catch(e){}
   if((a.id==='zee'||a.id==='stark') && /github|repo|repos|repository|commit|pull request|issues?\b|codebase/i.test(text)){
@@ -1140,6 +1237,11 @@ async function askAgent(a, text, opts={}){
     } else reply='No response received, Sir.';
     history.push({role:'user',content:'['+a.name+'] '+text},{role:'assistant',content:reply});
     busy=false;
+    if(opts.relayFrom && opts.relayLine && similar(reply, opts.relayLine)){
+      addLog('sys','SYSTEM', a.name+' echoed the question — re-asking properly.');
+      busy=false;
+      return askAgent(a, 'Answer this directly and substantively from your own expertise, without repeating the question: '+text, {relayFrom:opts.relayFrom});
+    }
     const after = opts.relayFrom ? ()=>bridgeBack(opts.relayFrom, a, reply) : null;
     if(drafting && reply.includes('---')){
       const spokenLine = reply.split('---')[0].trim().slice(0,300) || 'The draft is ready, Sir.';
