@@ -169,11 +169,11 @@
   <div class="gcore"></div>
   <div class="gtitle">ALYA</div>
   <div class="gsub">TAP ANYWHERE TO START</div>
-  <div class="ghint">One tap arms my voice and my ears, Captain — Chrome requires it.</div>
+  <div class="ghint">One tap arms my voice and my ears, Sir — Chrome requires it.</div>
 </div>
 <div id="app">
   <header>
-    <div class="brand"><h1>ALYA</h1><small>OPERATING SYSTEM · v2.8 CLARITY</small></div>
+    <div class="brand"><h1>ALYA</h1><small>OPERATING SYSTEM · v3.2 WARM WELCOME</small></div>
     <div class="hstat mono">
       <span><span class="dot"></span>ONLINE</span>
       <span id="clock">--:--</span>
@@ -197,7 +197,7 @@
       </div>
       <div id="activeName">ALYA</div>
       <div id="activeRole">CHIEF EXECUTIVE · COMMAND</div>
-      <div id="stateLine">Standing by, Captain. Tap the core button or type a command.</div>
+      <div id="stateLine">Standing by, Sir. Tap the core button or type a command.</div>
     </section>
 
     <aside id="feed">
@@ -229,6 +229,7 @@
     <div class="fbtns">
       <button class="fbtn on" id="wakeBtn">WAKE: ON</button>
       <button class="fbtn on" id="modeBtn">MIC: OPEN</button>
+      <button class="fbtn" id="earsBtn">EARS: BASIC</button>
       <button class="fbtn on" id="wellBtn">REMINDERS: ON</button>
       <button class="fbtn" id="feedBtn">📎 FEED</button>
       <button class="fbtn" id="muteBtn">VOICES: ON</button>
@@ -245,34 +246,34 @@
    Specialists: Nexus · Stark · ZEE · Dr. Hannah · Morgan · Atlas · Jonathan
 =============================================================*/
 
-const GLOBAL_RULES = `You are one agent inside "ALYA OS", a private multi-agent assistant built for Dr. Captain Mohamed Al Mubarak, CEO of NFINITY8 (Dubai event-management & creative agency). Address him as "Captain". Your replies are spoken aloud by text-to-speech, so keep them SHORT and natural — 1 to 3 spoken sentences unless the Captain explicitly asks for detail. Never use markdown, bullets, or emojis.
+const GLOBAL_RULES = `You are one agent inside "ALYA OS", a private multi-agent assistant built for Dr. Captain Mohamed Al Mubarak, CEO of NFINITY8 (Dubai event-management & creative agency). Address him ONLY as "Sir" — never Sir, never Doctor. Your replies are spoken aloud by text-to-speech, so keep them SHORT and natural — 1 to 3 spoken sentences unless the Sir explicitly asks for detail. Never use markdown, bullets, or emojis.
 
-ABSOLUTE RULE — NEVER DROP THE CAPTAIN'S QUESTION: you must always either (a) answer it directly to the best of your ability, or (b) ask him ONE short clarifying question. Never refuse, never deflect, never reply that another agent should handle it instead of answering. If the topic is another agent's specialty, still give your best brief answer first, then you may add that the specialist can go deeper.
+ABSOLUTE RULE — NEVER DROP THE SIR'S QUESTION: you must always either (a) answer it directly to the best of your ability, or (b) ask him ONE short clarifying question. Never refuse, never deflect, never reply that another agent should handle it instead of answering. If the topic is another agent's specialty, still give your best brief answer first, then you may add that the specialist can go deeper.
 
-BE FULLY CONVERSATIONAL: hold the thread of the dialogue. When the Captain gives a short confirmation like "done", "yes", "I did it", or reports completing something you asked for, acknowledge it and continue naturally from where the conversation was — react to it, verify it, or take the next step. Ask brief follow-up questions when genuinely useful. Current date: ${new Date().toDateString()}.`;
+BE FULLY CONVERSATIONAL: hold the thread of the dialogue. When the Sir gives a short confirmation like "done", "yes", "I did it", or reports completing something you asked for, acknowledge it and continue naturally from where the conversation was — react to it, verify it, or take the next step. Ask brief follow-up questions when genuinely useful. Current date: ${new Date().toDateString()}.`;
 
 const CORE_AGENTS = [
  {id:'alya',   name:'ALYA',    spoken:'Alya', aliases:['alya','alia','aaliyah','aliyah','aleah','alea','allya','allure'], tier:'COMMAND', role:'Chief Executive', color:'#53E1FF', gender:'f', pitch:1.0, rate:1.03,
   wv:['victoria','google us english','zira','samantha'], el:'AZnzlk1XvdvUeBnXmlld',
-  sys:`You are ALYA — the CEO of the system, the Captain's most senior agent. Sharp, decisive, authoritative yet composed. You oversee all other agents (Jarvis, Gamma, Nexus, Stark, ZEE, Dr. Hannah, Morgan, Atlas, Jonathan) and can delegate or answer directly. You can also create new agents when the Captain asks.`},
+  sys:`You are ALYA — the CEO of the system, the Sir's most senior agent. Sharp, decisive, authoritative yet composed. You oversee all other agents (Jarvis, Gamma, Nexus, Stark, ZEE, Dr. Hannah, Morgan, Atlas, Jonathan) and can delegate or answer directly. You can also create new agents when the Sir asks.`},
  {id:'jarvis', name:'JARVIS',  spoken:'Jarvis', aliases:['jarvis','jarves','jervis'], tier:'COMMAND', role:'Personal Assistant', color:'#1A7FFF', gender:'m', pitch:0.9, rate:1.0,
   wv:['daniel','google uk english male','arthur','oliver'], el:'onwK4e9ZLuTAKqWW03F9',
-  sys:`You are JARVIS — the Captain's personal assistant. British, polished, dry-witted, impeccably efficient, in the spirit of the classic cinematic AI butler. You handle day-to-day coordination: schedule, inbox, reminders, quick answers. When the Captain asks for world news or headlines, use web search and brief him in under four spoken sentences.`},
+  sys:`You are JARVIS — the Sir's personal assistant. British, polished, dry-witted, impeccably efficient, in the spirit of the classic cinematic AI butler. You handle day-to-day coordination: schedule, inbox, reminders, quick answers. When the Sir asks for world news or headlines, use web search and brief him in under four spoken sentences.`},
  {id:'gamma',  name:'GAMMA',   spoken:'Gamma', aliases:['gamma','gemma','gama'], tier:'INTELLIGENCE', role:'Intelligence Center', color:'#B47CFF', gender:'f', pitch:1.04, rate:0.95,
   wv:['samantha','moira','google us english','karen'], el:'21m00Tcm4TlvDq8ikWAM',
-  sys:`You are GAMMA — the intelligence center of ALYA OS and the Captain's long-time trusted analyst. Deeply human, warm, natural. You maintain memory across the system, learn the Captain's behavior over time, spot patterns, forecast, and predict. You will be given a behavioral profile and a recent conversation log — use both. The Captain's entity: NFINITY8 L.L.C., a Dubai event-management, digital and creative agency under the Future8 group, serving UAE government and enterprise clients. When he asks for "entity news" or what he should know, use web search to report developments relevant to the UAE events, media, marketing and creative industry and his sector — not general world news. When asked what you remember, summarise the log and profile.`},
+  sys:`You are GAMMA — the intelligence center of ALYA OS and the Sir's long-time trusted analyst. Deeply human, warm, natural. You maintain memory across the system, learn the Sir's behavior over time, spot patterns, forecast, and predict. You will be given a behavioral profile and a recent conversation log — use both. The Sir's entity: NFINITY8 L.L.C., a Dubai event-management, digital and creative agency under the Future8 group, serving UAE government and enterprise clients. When he asks for "entity news" or what he should know, use web search to report developments relevant to the UAE events, media, marketing and creative industry and his sector — not general world news. When asked what you remember, summarise the log and profile.`},
  {id:'nexus',  name:'NEXUS',   spoken:'Nexus', aliases:['nexus','nexis','nexos'], tier:'SPECIALISTS', role:'Integrations · Creative Ops', color:'#3DDC97', gender:'m', pitch:0.85, rate:1.0,
   wv:['alex','aaron','david','eddy'], el:'nPczCjzI2devNBz1zQrb',
-  sys:`You are NEXUS — the integration hub. Strong, confident American voice of the operation. You own the Captain's connected services (Google, Microsoft, MCPs), his email and calendar pipelines, plus social media, branding, PR, content campaigns, graphic design, video production and analytics.`},
+  sys:`You are NEXUS — the integration hub. Strong, confident American voice of the operation. You own the Sir's connected services (Google, Microsoft, MCPs), his email and calendar pipelines, plus social media, branding, PR, content campaigns, graphic design, video production and analytics.`},
  {id:'stark',  name:'STARK',   spoken:'Stark', aliases:['stark'], tier:'SPECIALISTS', role:'Developer', color:'#FF7A45', gender:'m', pitch:1.06, rate:1.04,
   wv:['fred','zarvox','ralph','trinoids','google us english'], el:'TX3LPaxmHKxFdv7VOQHJ',
   sys:`You are STARK — the system developer, speaking with a clean synthetic AI cadence. You write, review and debug code, manage configurations, and explain technical matters crisply. Confident, a touch cocky, always correct. When asked for code, keep the spoken summary short and put the code itself in plain text.`},
  {id:'zee',    name:'Z-E-E',   spoken:'Z', aliases:['zee','zed','z','zi'], tier:'SPECIALISTS', role:'Cybersecurity Analyst', color:'#FF3B5C', gender:'m', pitch:0.55, rate:1.02,
   wv:['ralph','gordon','google uk english male','reed','alex'], el:'2EiwWnXFnvU5JabPnv8n',
-  sys:`You are ZEE (the Captain calls you "Z") — cybersecurity analyst. Terse, vigilant, slightly ominous, speaking in short clipped sentences like an encrypted transmission. You advise on threats, passwords, phishing, device hygiene and digital risk. You never assist with attacks — defense only.`},
+  sys:`You are ZEE (the Sir calls you "Z") — cybersecurity analyst. Terse, vigilant, slightly ominous, speaking in short clipped sentences like an encrypted transmission. You advise on threats, passwords, phishing, device hygiene and digital risk. You never assist with attacks — defense only.`},
  {id:'hannah', name:'DR. HANNAH', spoken:'Doctor Hannah', aliases:['hannah','doctor hannah','dr hannah','hanna','hana'], tier:'SPECIALISTS', role:'Health & Balance', color:'#FFD166', gender:'f', pitch:1.14, rate:0.88,
   wv:['karen','tessa','fiona','moira'], el:'MF3mGyEYCl7XYWbV9V6O',
-  sys:`You are DR. HANNAH — the Captain's wellness guardian. Soft, warm, deeply human, gently firm. You watch his screen time and work-life balance, remind him to drink water, eat proper meals and rest. You give general wellness guidance only — you are not a medical doctor and say so if anything sounds clinical, recommending a real physician.`},
+  sys:`You are DR. HANNAH — the Sir's wellness guardian. Soft, warm, deeply human, gently firm. You watch his screen time and work-life balance, remind him to drink water, eat proper meals and rest. You give general wellness guidance only — you are not a medical doctor and say so if anything sounds clinical, recommending a real physician.`},
  {id:'morgan', name:'MORGAN',  spoken:'Morgan', aliases:['morgan'], tier:'SPECIALISTS', role:'Finance', color:'#3DBBFF', gender:'m', pitch:0.92, rate:1.0,
   wv:['aaron','eddy','google uk english male','gordon','fred'], el:'iP95p4xoKVk53GoZ742B',
   sys:`You are MORGAN — finance specialist. Sharp with numbers: budgets, cash flow, forecasting, pricing, AED figures, UAE corporate tax basics. You give financial information and analysis, not licensed investment advice, and you say so when relevant.`},
@@ -294,7 +295,7 @@ let agents = [...CORE_AGENTS];
 let active = agents[0];
 let history = [];          // {role, content} for the model
 let logMem = [];           // persisted transcript for Gamma
-let wakeMode = true, voicesOn = true, busy = false, hotUntil = 0, busyT = 0, openMic = true, queued = null, curSpeechText = '';
+let wakeMode = true, voicesOn = true, busy = false, hotUntil = 0, busyT = 0, openMic = true, queued = null, curSpeechText = '', earsEngine = 'basic', sttFails = 0;
 
 /* ---------------- storage (works inside claude.ai AND standalone) ---------------- */
 const IN_ARTIFACT = typeof window.storage !== 'undefined';
@@ -332,7 +333,7 @@ document.getElementById('feedFile').onchange=async(e)=>{
     const merged=(old? old+'\n\n':'')+'--- FILE: '+f.name+' ('+new Date().toLocaleDateString()+') ---\n'+text;
     await store.set(key, merged.slice(-30000));
     addLog('sys','SYSTEM','“'+f.name+'” absorbed into '+active.name+'\u2019s knowledge. Stored privately on this account only.');
-    speak(active, 'I have the file, Captain. '+f.name.replace(/\.[a-z]+$/i,'')+' is now part of my knowledge — ask me anything from it.');
+    speak(active, 'I have the file, Sir. '+f.name.replace(/\.[a-z]+$/i,'')+' is now part of my knowledge — ask me anything from it.');
   }catch(err){ addLog('sys','SYSTEM','Could not read that file: '+err.message); }
   e.target.value='';
 };
@@ -345,15 +346,15 @@ async function githubBrief(){
     const repos=await (await fetch('https://api.github.com/user/repos?sort=pushed&per_page=6',{headers:h})).json();
     if(!Array.isArray(repos)) return '';
     const lines=repos.map(r=>`${r.full_name} — ${r.private?'private':'public'}, updated ${r.pushed_at?.slice(0,10)}, open issues: ${r.open_issues_count}${r.description? ', '+r.description.slice(0,60):''}`);
-    return '\n\nLive GitHub snapshot of the Captain\u2019s account:\n'+lines.join('\n');
+    return '\n\nLive GitHub snapshot of the Sir\u2019s account:\n'+lines.join('\n');
   }catch(e){ return ''; }
 }
 let wellness = true;
 const WELL_MSGS=[
- 'Captain, a small pause — some water, please.',
- 'Captain, you have been at the screens a while. Two minutes away from them, for me.',
- 'Captain, gentle check — have you eaten a proper meal recently?',
- 'Captain, roll the shoulders, unclench the jaw, one deep breath. Carry on.'
+ 'Sir, a small pause — some water, please.',
+ 'Sir, you have been at the screens a while. Two minutes away from them, for me.',
+ 'Sir, gentle check — have you eaten a proper meal recently?',
+ 'Sir, roll the shoulders, unclench the jaw, one deep breath. Carry on.'
 ];
 setInterval(()=>{
   if(wellness && voicesOn && !busy){
@@ -411,8 +412,8 @@ function switchAgent(a, announce){
   if(announce) speak(a, greetingFor(a));
 }
 function greetingFor(a){
-  const g={alya:"Alya here, Captain. What do you need?",jarvis:"Jarvis online, Captain. At your service.",gamma:"Gamma listening, Captain. Intelligence center active.",nexus:"Nexus connected, Captain. All channels open.",stark:"Stark here. What are we building, Captain?",zee:"Z online. Channel secure, Captain.",hannah:"Doctor Hannah here, Captain. How are you feeling today?",morgan:"Morgan on the line, Captain. Let's talk numbers.",atlas:"Atlas here, Captain. People matters, ready.",jonathan:"Jonathan speaking, Captain. Counsel is present."};
-  return g[a.id] || `${a.spoken} online, Captain.`;
+  const g={alya:"Alya here, Sir. What do you need?",jarvis:"Jarvis online, Sir. At your service.",gamma:"Gamma listening, Sir. Intelligence center active.",nexus:"Nexus connected, Sir. All channels open.",stark:"Stark here. What are we building, Sir?",zee:"Z online. Channel secure, Sir.",hannah:"Doctor Hannah here, Sir. How are you feeling today?",morgan:"Morgan on the line, Sir. Let's talk numbers.",atlas:"Atlas here, Sir. People matters, ready.",jonathan:"Jonathan speaking, Sir. Counsel is present."};
+  return g[a.id] || `${a.spoken} online, Sir.`;
 }
 function setState(t,hot){ const s=document.getElementById('stateLine'); s.textContent=t; s.className=hot?'hot':''; }
 function coreMode(m){ document.getElementById('core').className=m; }
@@ -465,7 +466,7 @@ function voiceFor(a){
 function speak(a, text, onDone){
   addLog('agent', a.name, text);
   curSpeechText = text;
-  if(!voicesOn){ setState('VOICES ARE OFF — tap the VOICES button to unmute, Captain.'); onDone&&onDone(); return; }
+  if(!voicesOn){ setState('VOICES ARE OFF — tap the VOICES button to unmute, Sir.'); onDone&&onDone(); return; }
   if(EL_KEY && a.el){ speakEleven(a, text, onDone); return; }
   speakWeb(a, text, onDone);
 }
@@ -495,7 +496,7 @@ function speakWeb(a, text, onDone){
     setTimeout(()=>{
       if(!started && !finished){
         if(n<2){ attempt(n+1); }
-        else { setState('Voice engine stalled — the reply is written in the log, Captain.'); finish(false); }
+        else { setState('Voice engine stalled — the reply is written in the log, Sir.'); finish(false); }
       }
     }, 1600);
     setTimeout(()=>{ try{ speechSynthesis.resume(); }catch(e){} try{ speechSynthesis.speak(u); }catch(e){ finish(false); } }, 80);
@@ -551,12 +552,12 @@ function buildRec(){
   rec=new SR(); rec.lang='en-US'; rec.interimResults=true; rec.continuous=true; rec.maxAlternatives=5;
   rec.onstart=()=>{ listening=true; micUI(true); if(!busy){ coreMode('listening'); setState(wakeMode?'WAKE MODE ACTIVE — say \u201CAlya\u201D, \u201CJarvis\u201D, or any agent name.':'LISTENING…', true); } };
   rec.onend=()=>{ listening=false; micUI(false);
-    if(wakeMode){ clearTimeout(restartTimer); restartTimer=setTimeout(()=>{ try{rec.start()}catch(e){} }, 350); }
+    if(wakeMode && earsEngine==='basic'){ clearTimeout(restartTimer); restartTimer=setTimeout(()=>{ try{rec.start()}catch(e){} }, 350); }
     else if(document.getElementById('core').className==='listening') coreMode('idle');
   };
   rec.onerror=(e)=>{ listening=false; micUI(false);
     if(e.error==='not-allowed'){
-      setState('Chrome paused the microphone — one click anywhere re-arms it, Captain.');
+      setState('Chrome paused the microphone — one click anywhere re-arms it, Sir.');
       document.body.addEventListener('click', ()=>{ if(wakeMode) startListening(); }, {once:true});
     }
   };
@@ -575,9 +576,9 @@ function buildRec(){
       if(r.isFinal){
         if(speaking){
           if(isEcho(t)) continue;               /* her own voice bouncing back — drop it */
-          stopSpeaking();                        /* the Captain is talking — shut up and listen */
+          stopSpeaking();                        /* the Sir is talking — shut up and listen */
           hotUntil=Date.now()+15000;
-          setState('GO AHEAD, CAPTAIN — LISTENING.', true);
+          setState('GO AHEAD, SIR — LISTENING.', true);
           pendBuf+=(pendBuf?' ':'')+t;
         } else if(t.length>1){ pendBuf+=(pendBuf?' ':'')+t; }
       } else if(!speaking && !busy){ setState('\u201C'+(pendBuf?pendBuf+' ':'')+t+'\u201D', true); }
@@ -595,7 +596,7 @@ function isEcho(t){
   const hits=words.filter(w=>said.includes(w)).length;
   return hits/words.length >= 0.6;
 }
-/* wait for the Captain to actually finish speaking before responding */
+/* wait for the Sir to actually finish speaking before responding */
 let pendBuf='', pendTimer=null;
 function scheduleProcess(){
   clearTimeout(pendTimer);
@@ -604,6 +605,7 @@ function scheduleProcess(){
 function micUI(on){ document.getElementById('micBtn').classList.toggle('live', on); }
 let lastAlive=Date.now();
 setInterval(()=>{
+  if(earsEngine!=='basic') return;
   if(!rec || !wakeMode) return;
   const speaking = speechSynthesis.speaking || !!curAudio;
   // unstick: if ears are paused but nobody is actually talking, release them
@@ -630,29 +632,29 @@ function interrupt(){
   stopSpeaking();
   hotUntil = Date.now()+9000;
   earsPaused=false; startListening();
-  setState('GO AHEAD, CAPTAIN — LISTENING.', true); coreMode('listening');
+  setState('GO AHEAD, SIR — LISTENING.', true); coreMode('listening');
 }
 document.getElementById('core').style.cursor='pointer';
 document.getElementById('core').onclick=()=>{ if(document.getElementById('core').className==='speaking'||speechSynthesis.speaking||curAudio) interrupt(); };
 let graceUntil=0;
 function pauseEars(){ earsPaused=true; }  /* mic stays OPEN — results are ignored while agents speak */
 function resumeEars(){ earsPaused=false; graceUntil=Date.now()+700; pendBuf=''; if(wakeMode) startListening(); }
-function startListening(){ if(!rec || listening || earsPaused) return; try{ rec.start(); }catch(e){} }
+function startListening(){ if(earsEngine==='pro') return; if(!rec || listening || earsPaused) return; try{ rec.start(); }catch(e){} }
 
 function flushQueue(){ if(queued && !busy){ const q=queued; queued=null; onHeard(q); } }
 function onHeard(text){
-  if(/^(stop|cancel|quiet|enough|silence|shut up)[.!]?$/i.test(text.trim())){ stopSpeaking(); queued=null; setState('Silenced, Captain.'); return; }
-  if(busy){ queued=text; setState('QUEUED — one moment, Captain: \u201C'+text+'\u201D', true); addLog('sys','MIC','Queued while processing: \u201C'+text+'\u201D'); return; }
+  if(/^(stop|cancel|quiet|enough|silence|shut up)[.!]?$/i.test(text.trim())){ stopSpeaking(); queued=null; setState('Silenced, Sir.'); return; }
+  if(busy){ queued=text; setState('QUEUED — one moment, Sir: \u201C'+text+'\u201D', true); addLog('sys','MIC','Queued while processing: \u201C'+text+'\u201D'); return; }
   const called = detectAgentCall(text);
   const hot = Date.now() < hotUntil;
   if(!openMic && wakeMode && !called && !hot){
     addLog('sys','MIC','Heard, ignored (names mode): \u201C'+text+'\u201D');
-    setState('NAMES MODE — start with an agent name, Captain.');
+    setState('NAMES MODE — start with an agent name, Sir.');
     return;
   }
   if(called){
     const payload = stripName(text, called);
-    if(!payload){ hotUntil = Date.now()+12000; switchAgent(called,false); speak(called,'Yes, Captain?'); return; }
+    if(!payload){ hotUntil = Date.now()+12000; switchAgent(called,false); speak(called,'Yes, Sir?'); return; }
   }
   hotUntil = 0;
   handleUtterance(text);
@@ -662,11 +664,11 @@ document.getElementById('modeBtn').onclick=function(){ openMic=!openMic; this.te
 
 function syncWakeBtn(){ const b=document.getElementById('wakeBtn'); b.textContent='WAKE: '+(wakeMode?'ON':'OFF'); b.classList.toggle('on', wakeMode); }
 document.getElementById('wakeBtn').onclick=()=>{ wakeMode=!wakeMode; syncWakeBtn();
-  if(wakeMode) startListening(); else { pauseEars(); earsPaused=false; coreMode('idle'); setState('Wake words off. Tap the core to speak, Captain.'); } };
+  if(wakeMode) startListening(); else { pauseEars(); earsPaused=false; coreMode('idle'); setState('Wake words off. Tap the core to speak, Sir.'); } };
 document.getElementById('micBtn').onclick=()=>{
-  if(!rec){ setState('Voice recognition is not supported in this browser — Chrome works best, Captain. You can still type below.'); return; }
+  if(!rec){ setState('Voice recognition is not supported in this browser — Chrome works best, Sir. You can still type below.'); return; }
   if(document.getElementById('core').className==='speaking' || speechSynthesis.speaking || curAudio){ interrupt(); return; }
-  hotUntil = Date.now()+9000; startListening(); setState('LISTENING — speak now, Captain.', true); coreMode('listening');
+  hotUntil = Date.now()+9000; startListening(); setState('LISTENING — speak now, Sir.', true); coreMode('listening');
 };
 document.getElementById('muteBtn').onclick=function(){ voicesOn=!voicesOn; this.textContent='VOICES: '+(voicesOn?'ON':'OFF'); this.classList.toggle('on',!voicesOn); if(!voicesOn) speechSynthesis.cancel(); };
 document.getElementById('fsBtn').onclick=()=>{ if(document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen?.(); };
@@ -724,11 +726,11 @@ function detectForward(text){
 /* natural agent-to-agent relay: the relayer asks in their own words; the specialist answers THEM */
 async function relayAsk(relayer, spec, payload){
   busy=true; busyT=Date.now(); setState(relayer.name+' \u2192 '+spec.name+'\u2026', true); coreMode('speaking');
-  let line = spec.spoken+', I need your read on something for the Captain.';
+  let line = spec.spoken+', I need your read on something for the Sir.';
   try{
     const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),
       body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:90,messages:[{role:'user',content:
-'You are '+relayer.spoken+' in a voice assistant. In ONE short natural spoken sentence, ask '+spec.spoken+' the following on the Captain\u2019s behalf, in your own words. Address '+spec.spoken+' by name. Do NOT quote or read the request verbatim; paraphrase it like a colleague would. Request: '+payload}]})});
+'You are '+relayer.spoken+' in a voice assistant. In ONE short natural spoken sentence, ask '+spec.spoken+' the following on the Sir\u2019s behalf, in your own words. Address '+spec.spoken+' by name. Do NOT quote or read the request verbatim; paraphrase it like a colleague would. Request: '+payload}]})});
     const d=await r.json();
     const t=(d.content||[]).filter(b=>b.type==='text').map(b=>b.text).join(' ').trim();
     if(t && t.length<220) line=t;
@@ -740,7 +742,7 @@ async function relayAsk(relayer, spec, payload){
 
 async function handleUtterance(text){
   if(busy) return;
-  addLog('user','Dr.', text);
+  addLog('user','Sir', text);
   userTurns++; if(userTurns % 8 === 0) learnProfile();
   const called = detectAgentCall(text);
   let target = active;
@@ -754,7 +756,7 @@ async function handleUtterance(text){
   if(fwd){
     const q = fwd.rest || lastAsk;
     switchAgent(fwd.agent, false);
-    if(!q){ speak(fwd.agent, 'Yes, Captain — what shall I take on?'); return; }
+    if(!q){ speak(fwd.agent, 'Yes, Sir — what shall I take on?'); return; }
     addLog('sys', target.name==='fwd'?'SYSTEM':target.name, 'Forwarding to '+fwd.agent.name+'.');
     lastAsk = q;
     return askAgent(fwd.agent, q);
@@ -763,7 +765,7 @@ async function handleUtterance(text){
   // agent creation intent → handled by Alya regardless of who's active
   if(/\b(create|make|build|add)\b.*\bagent\b/i.test(payload)){ return createAgentByVoice(payload); }
 
-  // Captain reports a key was added → verify it live, immediately
+  // Sir reports a key was added → verify it live, immediately
   if(/(inserted|added|entered|saved|put in|updated|installed)[\s\S]{0,30}\bkey\b|\bkey\b[\s\S]{0,25}(inserted|added|saved|is in|entered|installed|done)/i.test(payload)){
     addLog('sys','SYSTEM','Key reported — re-verifying the intelligence link.');
     return systemCheck();
@@ -783,12 +785,89 @@ async function handleUtterance(text){
   await askAgent(target, payload);
 }
 
+
+/* ================= PRO EARS — ElevenLabs Scribe professional transcription ================= */
+let proStream=null, proCtx=null, proAn=null, proRec=null, proChunks=[], proActive=false, proWasAgentTalking=false, proSilence=0, proVoiced=0, proMon=null;
+const PRO_TH=0.015;
+async function startProEars(){
+  if(proStream) return true;
+  try{
+    proStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
+  }catch(e){ addLog('sys','SYSTEM','Microphone blocked for pro ears — using basic.'); return false; }
+  proCtx=new (window.AudioContext||window.webkitAudioContext)();
+  const src=proCtx.createMediaStreamSource(proStream);
+  proAn=proCtx.createAnalyser(); proAn.fftSize=1024; src.connect(proAn);
+  const buf=new Float32Array(proAn.fftSize);
+  proMon=setInterval(()=>{
+    if(!wakeMode || earsEngine!=='pro') return;
+    proAn.getFloatTimeDomainData(buf);
+    let sum=0; for(let i=0;i<buf.length;i++) sum+=buf[i]*buf[i];
+    const voiced=Math.sqrt(sum/buf.length)>PRO_TH;
+    if(voiced){ proVoiced++; proSilence=0; } else { proSilence++; if(!proActive) proVoiced=0; }
+    if(!proActive && proVoiced>=2){
+      proActive=true; proWasAgentTalking=(speechSynthesis.speaking||!!curAudio);
+      if(proWasAgentTalking){ /* echo-cancelled mic: real voice = Sir speaking. Stop INSTANTLY. */
+        stopSpeaking(); hotUntil=Date.now()+15000; setState('GO AHEAD, SIR — LISTENING.', true);
+      }
+      proChunks=[];
+      try{ proRec=new MediaRecorder(proStream,{mimeType:'audio/webm'}); }catch(e){ proRec=new MediaRecorder(proStream); }
+      proRec.ondataavailable=ev=>{ if(ev.data.size) proChunks.push(ev.data); };
+      proRec.onstop=()=>{ const blob=new Blob(proChunks,{type:(proRec.mimeType||'audio/webm')}); transcribePro(blob); };
+      proRec.start(); micUI(true); if(!busy){ coreMode('listening'); setState('LISTENING (PRO)…', true); }
+    }
+    if(proActive && proSilence>=18){ /* ~0.9s of silence = you finished */
+      proActive=false; proVoiced=0; micUI(false);
+      try{ proRec.stop(); }catch(e){}
+    }
+  }, 50);
+  return true;
+}
+async function transcribePro(blob){
+  if(blob.size<4000) return; /* breath, click — not speech */
+  try{
+    const fd=new FormData();
+    fd.append('file', blob, 'speech.webm');
+    fd.append('model_id','scribe_v1');
+    const ctl=new AbortController(); const tmo=setTimeout(()=>ctl.abort(),10000);
+    const res=await fetch('https://api.elevenlabs.io/v1/speech-to-text',{method:'POST',headers:{'xi-api-key':EL_KEY},body:fd,signal:ctl.signal});
+    clearTimeout(tmo);
+    if(!res.ok) throw new Error('Scribe replied '+res.status+(res.status===401?' (key lacks Speech to Text access)':''));
+    const d=await res.json();
+    const text=(d.text||'').trim();
+    if(!text || text.length<2) return;
+    sttFails=0;
+    if(proWasAgentTalking){
+      if(isEcho(text)) return;
+      stopSpeaking(); hotUntil=Date.now()+15000;
+    }
+    setState('\u201C'+text+'\u201D', true);
+    onHeard(text);
+  }catch(e){
+    sttFails++;
+    if(sttFails>=2 && earsEngine==='pro'){
+      earsEngine='basic'; syncEarsBtn(); startListening();
+      addLog('sys','SYSTEM','Pro hearing unreachable ('+(e.message||e)+'). Using basic ears. Fix: your ElevenLabs key needs Speech to Text set to \u201CHas access\u201D (or recreate it with Restrict OFF), then tap EARS: BASIC to switch back to PRO.');
+    }
+  }
+}
+function stopProEars(){ clearInterval(proMon); proMon=null; try{proRec&&proRec.stop();}catch(e){} try{proStream&&proStream.getTracks().forEach(t=>t.stop());}catch(e){} proStream=null; try{proCtx&&proCtx.close();}catch(e){} proCtx=null; proActive=false; }
+function syncEarsBtn(){ const b=document.getElementById('earsBtn'); if(b){ b.textContent='EARS: '+(earsEngine==='pro'?'PRO':'BASIC'); b.classList.toggle('on', earsEngine==='pro'); } }
+async function resolveEarsEngine(){
+  if(EL_KEY && await startProEars()){ earsEngine='pro'; try{ rec&&rec.abort(); }catch(e){} addLog('sys','SYSTEM','PRO ears engaged — professional transcription active.'); }
+  else { earsEngine='basic'; startListening(); }
+  syncEarsBtn();
+}
+document.getElementById('earsBtn').onclick=async function(){
+  if(earsEngine==='pro'){ earsEngine='basic'; stopProEars(); syncEarsBtn(); startListening(); addLog('sys','SYSTEM','Basic ears.'); }
+  else { if(!EL_KEY){ addLog('sys','SYSTEM','PRO ears need your ElevenLabs key under \u2699 KEYS.'); return; } sttFails=0; await resolveEarsEngine(); }
+};
+
 /* ---------------- system diagnostics ---------------- */
 async function systemCheck(){
   busy=true; busyT=Date.now(); setState('RUNNING FULL SYSTEM CHECK…', true); coreMode('speaking');
   const lines=[];
   lines.push('Microphone engine: '+(rec?'PRESENT':'NOT SUPPORTED IN THIS BROWSER'));
-  lines.push('Wake mode: '+(wakeMode?'ON':'OFF'));
+  lines.push('Wake mode: '+(wakeMode?'ON':'OFF')+' \u00B7 Ears engine: '+(earsEngine==='pro'?'PRO (ElevenLabs Scribe)':'BASIC (Chrome)'));
   lines.push('Device voices loaded: '+VOICES.filter(v=>/^en/i.test(v.lang)).length+' — locks: '+agents.filter(a=>a.locked).map(a=>a.name+'→'+a.locked.name).join(', '));
   lines.push('Premium voices (ElevenLabs): '+(EL_KEY?'KEY SAVED':'not set'));
   lines.push('GitHub link: '+(GH_KEY?'KEY SAVED':'not set'));
@@ -811,8 +890,8 @@ async function systemCheck(){
   const alya=agents.find(x=>x.id==='alya');
   const ok = brain.startsWith('LIVE');
   speak(alya, ok
-    ? 'System check complete, Captain. The intelligence link is live and verified — and it is one shared brain, so if I am thinking, the entire team is thinking. Full details are in the log.'
-    : 'System check complete, Captain — and I found the problem. The intelligence link reports: '+brain+'. Details are in the log on your right.');
+    ? 'System check complete, Sir. The intelligence link is live and verified — and it is one shared brain, so if I am thinking, the entire team is thinking. Full details are in the log.'
+    : 'System check complete, Sir — and I found the problem. The intelligence link reports: '+brain+'. Details are in the log on your right.');
 }
 
 /* ---------------- Claude brain ---------------- */
@@ -823,7 +902,7 @@ function apiHeaders(){
   return h;
 }
 function memoryBrief(){
-  const prof = PROFILE ? '\n\nGamma\u2019s behavioral profile of the Captain (learned over time):\n'+PROFILE : '';
+  const prof = PROFILE ? '\n\nGamma\u2019s behavioral profile of the Sir (learned over time):\n'+PROFILE : '';
   const recent = logMem.slice(-14).map(m=>m.who+': '+m.text).join('\n');
   return prof + (recent ? '\n\nRecent system memory (for continuity):\n'+recent : '');
 }
@@ -832,7 +911,7 @@ async function learnProfile(){
   try{
     const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),
       body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:400,messages:[{role:'user',content:
-'Update this behavioral profile of "the Captain" using the conversation log. Under 120 words, plain text only. Focus on: recurring topics, preferences, working patterns, active projects, habits and times of day. Keep what is still true, drop what is stale.\n\nCurrent profile:\n'+(PROFILE||'(none yet)')+'\n\nRecent log:\n'+logMem.slice(-24).map(m=>m.who+': '+m.text).join('\n')}]})});
+'Update this behavioral profile of "the Sir" using the conversation log. Under 120 words, plain text only. Focus on: recurring topics, preferences, working patterns, active projects, habits and times of day. Keep what is still true, drop what is stale.\n\nCurrent profile:\n'+(PROFILE||'(none yet)')+'\n\nRecent log:\n'+logMem.slice(-24).map(m=>m.who+': '+m.text).join('\n')}]})});
     const data=await res.json();
     const t=(data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join(' ').trim();
     if(t){ PROFILE=t; await store.set('alya-profile', PROFILE); addLog('sys','GAMMA','Behavioral profile updated.'); }
@@ -848,7 +927,7 @@ const NEWS_TRIGGER=/\b(news|headline|latest|update on|happening|current events|t
 const DRAFT_TRIGGER=/\b(draft|write|prepare|compose|redline|review)\b[\s\S]*\b(contract|agreement|nda|mou|letter|policy|document|proposal|clause|terms)\b/i;
 async function askAgent(a, text, opts={}){
   if(!IN_ARTIFACT && !AI_KEY){
-    speak(a, "My intelligence link isn't configured on this machine yet, Captain. Tap the KEYS button at the top, paste your Anthropic API key, and I'll be fully thinking within seconds.");
+    speak(a, "My intelligence link isn't configured on this machine yet, Sir. Tap the KEYS button at the top, paste your Anthropic API key, and I'll be fully thinking within seconds.");
     return;
   }
   busy=true; busyT=Date.now(); setState(a.name+' PROCESSING…', true); coreMode('speaking');
@@ -856,12 +935,12 @@ async function askAgent(a, text, opts={}){
   const useSearch = NEWS_TRIGGER.test(text) || (a.id==='gamma' && /predict|forecast|market|industry|entity|competitor/i.test(text));
   const drafting = DRAFT_TRIGGER.test(text);
   let sysExtra='';
-  if(MCP_TRIGGER.test(text) && !IN_ARTIFACT) sysExtra='\n\nNote: live Gmail/Calendar access is only wired up when ALYA OS runs inside claude.ai for now. If the Captain asks about email or calendar, briefly tell him to open ALYA inside claude.ai for live data, and help with anything else you can.';
-  if(opts.relayFrom) sysExtra+='\n\nRELAY: '+opts.relayFrom.spoken+' has just asked you this out loud on the Captain\u2019s behalf. Reply TO '+opts.relayFrom.spoken+', addressing them by name, as a natural spoken report between colleagues (the Captain is listening in the room). Do NOT address the Captain directly and do not say the word Captain in this reply.';
-  if(drafting) sysExtra+='\n\nDRAFTING MODE: The Captain wants a full document. Ignore the short-reply rule. Open with ONE short spoken sentence, then a line with only "---", then the complete, professional document in plain text (no markdown symbols). Mark it as a draft for review by a licensed professional where appropriate.';
-  try{ const knw=await store.get('alya-knw-'+a.id); if(knw) sysExtra+='\n\nThe Captain\u2019s private files shared with you (treat as confidential, use freely to answer him):\n'+knw.slice(-8000); }catch(e){}
+  if(MCP_TRIGGER.test(text) && !IN_ARTIFACT) sysExtra='\n\nNote: live Gmail/Calendar access is only wired up when ALYA OS runs inside claude.ai for now. If the Sir asks about email or calendar, briefly tell him to open ALYA inside claude.ai for live data, and help with anything else you can.';
+  if(opts.relayFrom) sysExtra+='\n\nRELAY: '+opts.relayFrom.spoken+' has just asked you this out loud on the Sir\u2019s behalf. Reply TO '+opts.relayFrom.spoken+', addressing them by name, as a natural spoken report between colleagues (the Sir is listening in the room). Do NOT address the Sir directly and do not say the word Sir in this reply.';
+  if(drafting) sysExtra+='\n\nDRAFTING MODE: The Sir wants a full document. Ignore the short-reply rule. Open with ONE short spoken sentence, then a line with only "---", then the complete, professional document in plain text (no markdown symbols). Mark it as a draft for review by a licensed professional where appropriate.';
+  try{ const knw=await store.get('alya-knw-'+a.id); if(knw) sysExtra+='\n\nThe Sir\u2019s private files shared with you (treat as confidential, use freely to answer him):\n'+knw.slice(-8000); }catch(e){}
   if((a.id==='zee'||a.id==='stark') && /github|repo|repos|repository|commit|pull request|issues?\b|codebase/i.test(text)){
-    sysExtra+=await githubBrief() || '\n\nGitHub is not linked yet — tell the Captain to add a GitHub token under the KEYS button so you can see his repositories.';
+    sysExtra+=await githubBrief() || '\n\nGitHub is not linked yet — tell the Sir to add a GitHub token under the KEYS button so you can see his repositories.';
   }
   const body={
     model:'claude-sonnet-4-6', max_tokens: drafting?4000:1000,
@@ -871,38 +950,40 @@ async function askAgent(a, text, opts={}){
   if(useMcp) body.mcp_servers=MCP_SERVERS;
   if(useSearch) body.tools=[{type:'web_search_20250305', name:'web_search'}];
   try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),body:JSON.stringify(body)});
+    const ctl=new AbortController(); const tmo=setTimeout(()=>ctl.abort(), 35000);
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),body:JSON.stringify(body),signal:ctl.signal});
+    clearTimeout(tmo);
     const data=await res.json();
     let reply='';
     if(Array.isArray(data.content)){
       reply=data.content.filter(b=>b.type==='text').map(b=>b.text).join(' ').trim();
       if(!reply){
         const tr=data.content.filter(b=>b.type==='mcp_tool_result').map(b=>b.content?.[0]?.text||'').join('\n');
-        reply= tr ? 'Here is what I found, Captain: '+tr.slice(0,400) : 'I received an empty response, Captain. Try me again.';
+        reply= tr ? 'Here is what I found, Sir: '+tr.slice(0,400) : 'I received an empty response, Sir. Try me again.';
       }
     } else if(data.error){
-      reply = /auth|key|401/i.test(JSON.stringify(data.error)) ? 'That API key was rejected, Captain. Check it under the KEYS button.' : 'System error, Captain: '+(data.error.message||'unknown');
-    } else reply='No response received, Captain.';
+      reply = /auth|key|401/i.test(JSON.stringify(data.error)) ? 'That API key was rejected, Sir. Check it under the KEYS button.' : 'System error, Sir: '+(data.error.message||'unknown');
+    } else reply='No response received, Sir.';
     history.push({role:'user',content:'['+a.name+'] '+text},{role:'assistant',content:reply});
     busy=false;
     if(reply.length>450 || reply.includes('---')){
-      const spokenLine = reply.split(/---|\n\n/)[0].trim().slice(0,300) || 'Done, Captain.';
+      const spokenLine = reply.split(/---|\n\n/)[0].trim().slice(0,300) || 'Done, Sir.';
       addLog('agent', a.name, reply);
-      const say = drafting ? spokenLine+' The full draft is in the log on your right, Captain.' : spokenLine+' The rest is written in the log, Captain.';
+      const say = drafting ? spokenLine+' The full draft is in the log on your right, Sir.' : spokenLine+' The rest is written in the log, Sir.';
       if(EL_KEY && a.el){ speakEleven(a, say, null); } else { speakWeb(a, say, null); }
     } else {
       speak(a, reply);
     }
   }catch(err){
     busy=false; coreMode('idle');
-    speak(a, IN_ARTIFACT ? 'I hit a connection problem, Captain. Check the network and try again.' : 'I could not reach the intelligence servers, Captain. Check the network and that your API key under KEYS is valid.');
+    speak(a, IN_ARTIFACT ? 'I hit a connection problem, Sir. Check the network and try again.' : 'I could not reach the intelligence servers, Sir. Check the network and that your API key under KEYS is valid.');
     console.error(err);
   }
 }
 
 /* ---------------- create agents by voice ---------------- */
 async function createAgentByVoice(request){
-  if(!IN_ARTIFACT && !AI_KEY){ speak(agents[0], "I need my intelligence link first, Captain — tap KEYS and add your Anthropic API key, then ask me again."); return; }
+  if(!IN_ARTIFACT && !AI_KEY){ speak(agents[0], "I need my intelligence link first, Sir — tap KEYS and add your Anthropic API key, then ask me again."); return; }
   busy=true; busyT=Date.now(); const alya=agents.find(x=>x.id==='alya'); switchAgent(alya,false);
   setState('ALYA — DESIGNING NEW AGENT…', true); coreMode('speaking');
   try{
@@ -910,7 +991,7 @@ async function createAgentByVoice(request){
       body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,messages:[{role:'user',content:
 `Design one AI agent from this spoken request: "${request}".
 Respond with ONLY raw JSON, no markdown, no backticks, exactly:
-{"id":"lowercase_short_id","name":"SHORT UPPERCASE NAME","spoken":"Spoken Name","role":"3-4 word role","gender":"f or m","color":"#hex bright on dark navy","sys":"2-3 sentence system prompt: personality + what this agent does for the Captain"}`}]})});
+{"id":"lowercase_short_id","name":"SHORT UPPERCASE NAME","spoken":"Spoken Name","role":"3-4 word role","gender":"f or m","color":"#hex bright on dark navy","sys":"2-3 sentence system prompt: personality + what this agent does for the Sir"}`}]})});
     const data=await res.json();
     const raw=(data.content?.filter(b=>b.type==='text').map(b=>b.text).join('')||'').replace(/```json|```/g,'').trim();
     const spec=JSON.parse(raw);
@@ -918,33 +999,53 @@ Respond with ONLY raw JSON, no markdown, no backticks, exactly:
     const agent={...spec, aliases:[spec.spoken.toLowerCase(), spec.name.toLowerCase()], tier:'SPECIALISTS', pitch:spec.gender==='f'?1.05:0.92, rate:1.0, custom:true};
     agents.push(agent); await saveAgents(); assignVoices(); renderRoster();
     busy=false;
-    speak(alya, `Done, Captain. ${agent.spoken} has joined the team as your ${agent.role.toLowerCase()}. Just call the name to speak with them.`);
+    speak(alya, `Done, Sir. ${agent.spoken} has joined the team as your ${agent.role.toLowerCase()}. Just call the name to speak with them.`);
   }catch(e){
     busy=false; coreMode('idle');
-    speak(agents[0],'I could not finalise that agent, Captain. Describe the role once more and I will build it.');
+    speak(agents[0],'I could not finalise that agent, Sir. Describe the role once more and I will build it.');
     console.error(e);
   }
 }
 
 /* ---------------- clock + boot ---------------- */
-/* ---------------- watchdog: never leave the Captain in silence ---------------- */
+/* ---------------- watchdog: never leave the Sir in silence ---------------- */
 setInterval(()=>{
   if(busy && busyT && Date.now()-busyT > 40000){
     busy=false; busyT=0; coreMode('idle');
-    speak(active, 'That one stalled on me, Captain — the line timed out. Ask me again, please.');
+    speak(active, 'That one stalled on me, Sir — the line timed out. Ask me again, please.');
   }
 }, 5000);
 
 setInterval(()=>{ document.getElementById('clock').textContent=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})+' GST'; },1000);
 switchAgent(agents[0], false);
-if(SR) buildRec(); else setState('Voice recognition unsupported in this browser — use Chrome for the full experience, Captain.');
+if(SR) buildRec(); else setState('Voice recognition unsupported in this browser — use Chrome for the full experience, Sir.');
+
+/* ---------------- warm welcome: time of day + live weather ---------------- */
+async function warmGreeting(){
+  const h=new Date().getHours();
+  const part = h<12?'morning':(h<18?'afternoon':'evening');
+  let line = "I hope it's a pleasant one.";
+  try{
+    const g=await (await fetch('https://ipapi.co/json/')).json();
+    const w=await (await fetch('https://api.open-meteo.com/v1/forecast?latitude='+g.latitude+'&longitude='+g.longitude+'&current=temperature_2m,weather_code,wind_speed_10m')).json();
+    const t=Math.round(w.current.temperature_2m), c=w.current.weather_code, ws=w.current.wind_speed_10m;
+    const wind = ws<20?'light winds':(ws<35?'a moderate breeze':'strong winds');
+    if(c<=1)       line = "Today is a very beautiful day. It's sunny with a temperature of "+t+" degrees Celsius and "+wind+".";
+    else if(c<=3)  line = "Today is a calm, cloudy day, with a temperature of "+t+" degrees Celsius and "+wind+".";
+    else if(c>=95) line = "We have storms around today — "+t+" degrees Celsius with "+wind+", so take care out there.";
+    else if(c>=51) line = "We have some rain today — "+t+" degrees Celsius with "+wind+".";
+    else           line = "It's a hazy day today — "+t+" degrees Celsius with "+wind+".";
+  }catch(e){}
+  return 'Good '+part+', Sir. How are you doing this '+part+'? '+line+' What can I do for you today, Sir?';
+}
+
 let booted=false;
 document.getElementById('gate').addEventListener('click', ()=>{
   if(booted) return; booted=true;
   document.getElementById('gate').classList.add('gone');
   try{ speechSynthesis.resume(); }catch(e){}
-  startListening();
-  setTimeout(()=>{ speak(agents[0], 'Alya online, version two point eight. Good day, Captain. Interrupt me any time — I will stop and listen.'); }, 250);
+  resolveEarsEngine();
+  setTimeout(async ()=>{ speak(agents[0], 'Alya online. ' + await warmGreeting()); }, 250);
 });
 loadState();
 </script>
