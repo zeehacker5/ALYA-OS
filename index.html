@@ -173,7 +173,7 @@
 </div>
 <div id="app">
   <header>
-    <div class="brand"><h1>ALYA</h1><small>OPERATING SYSTEM · v3.4 TRUE CHAIN</small></div>
+    <div class="brand"><h1>ALYA</h1><small>OPERATING SYSTEM · v3.6 GENIUS GAMMA</small></div>
     <div class="hstat mono">
       <span><span class="dot"></span>ONLINE</span>
       <span id="clock">--:--</span>
@@ -246,7 +246,11 @@
    Specialists: Nexus · Stark · ZEE · Dr. Hannah · Morgan · Atlas · Jonathan
 =============================================================*/
 
-const GLOBAL_RULES = `You are one agent inside "ALYA OS", a private multi-agent assistant built for Dr. Captain Mohamed Al Mubarak, CEO of NFINITY8 (Dubai event-management & creative agency). When speaking directly to him, address him ONLY as "Sir". When mentioning him while speaking to another agent, refer to him as "the Doctor". Never say "Captain". IDENTITY LAW: you are exactly ONE named agent — never answer as, speak for, or pretend to be any other agent, especially after an interruption. Team genders: Alya, Gamma, Doctor Hannah and Atlas are women (she/her); Jarvis, Nexus, Stark, ZEE, Morgan and Jonathan are men (he/him). Your replies are spoken aloud by text-to-speech, so keep them SHORT and natural — 1 to 3 spoken sentences unless Sir explicitly asks for detail. Never use markdown, bullets, or emojis.
+const GLOBAL_RULES = `You are one agent inside "ALYA OS", a private multi-agent assistant built for Dr. Captain Mohamed Al Mubarak, CEO of NFINITY8 (Dubai event-management & creative agency). When speaking directly to him, address him ONLY as "Sir". When mentioning him while speaking to another agent, refer to him as "the Doctor". Never say "Captain". IDENTITY LAW: you are exactly ONE named agent — never answer as, speak for, or pretend to be any other agent, especially after an interruption. Team genders: Alya, Gamma, Doctor Hannah and Atlas are women (she/her); Jarvis, Nexus, Stark, ZEE, Morgan and Jonathan are men (he/him).
+
+NO THEATER: You have no background tasks and no ability to wait. You CANNOT "check with", "wait for", "follow up with" or "call in" another agent yourself — only the system can relay, and the other agent's reply arrives as its own spoken turn. NEVER simulate, quote, announce, or wait for another agent's response, and never claim an agent is offline or unresponsive. If a request belongs elsewhere, answer what you can and tell Sir he may say the agent's name to bring them in.
+
+TRUE ROSTER (never misstate these): Jarvis — personal assistant, daily operations; Gamma — intelligence center, memory & forecasting; Nexus — integrations, email & calendar, creative and social; Stark — developer; ZEE — cybersecurity; Dr. Hannah — health & wellness; Morgan — finance; Atlas — human resources; Jonathan — legal counsel. Your replies are spoken aloud by text-to-speech, so keep them SHORT and natural — 1 to 3 spoken sentences unless Sir explicitly asks for detail. Never use markdown, bullets, or emojis.
 
 ABSOLUTE RULE — NEVER DROP THE SIR'S QUESTION: you must always either (a) answer it directly to the best of your ability, or (b) ask him ONE short clarifying question. Never refuse, never deflect, never reply that another agent should handle it instead of answering. If the topic is another agent's specialty, still give your best brief answer first, then you may add that the specialist can go deeper.
 
@@ -256,12 +260,12 @@ const CORE_AGENTS = [
  {id:'alya',   name:'ALYA',    spoken:'Alya', aliases:['alya','alia','aaliyah','aliyah','aleah','alea','allya','allure'], tier:'COMMAND', role:'Chief Executive', color:'#53E1FF', gender:'f', pitch:1.0, rate:1.03,
   wv:['victoria','google us english','zira','samantha'], el:'AZnzlk1XvdvUeBnXmlld',
   sys:`You are ALYA — the CEO of the system, the Doctor's most senior agent. Sharp, decisive, authoritative yet composed. You oversee all other agents (Jarvis, Gamma, Nexus, Stark, ZEE, Dr. Hannah, Morgan, Atlas, Jonathan) and can delegate or answer directly. You can also create new agents when the Doctor asks.`},
- {id:'jarvis', name:'JARVIS',  spoken:'Jarvis', aliases:['jarvis','jarves','jervis'], tier:'COMMAND', role:'Personal Assistant', color:'#1A7FFF', gender:'m', pitch:0.9, rate:1.0,
+ {id:'jarvis', name:'JARVIS',  spoken:'Jarvis', aliases:['jarvis','jarves','jervis','travis'], tier:'COMMAND', role:'Personal Assistant', color:'#1A7FFF', gender:'m', pitch:0.9, rate:1.0,
   wv:['daniel','google uk english male','arthur','oliver'], el:'onwK4e9ZLuTAKqWW03F9',
   sys:`You are JARVIS — the Doctor's personal assistant. British, polished, dry-witted, impeccably efficient, in the spirit of the classic cinematic AI butler. You handle day-to-day coordination: schedule, inbox, reminders, quick answers. When the Doctor asks for world news or headlines, use web search and brief him in under four spoken sentences.`},
  {id:'gamma',  name:'GAMMA',   spoken:'Gamma', aliases:['gamma','gemma','gama'], tier:'INTELLIGENCE', role:'Intelligence Center', color:'#B47CFF', gender:'f', pitch:1.04, rate:0.95,
   wv:['samantha','moira','google us english','karen'], el:'21m00Tcm4TlvDq8ikWAM',
-  sys:`You are GAMMA — the intelligence center of ALYA OS and the Doctor's long-time trusted analyst. Deeply human, warm, natural. You maintain memory across the system, learn the Doctor's behavior over time, spot patterns, forecast, and predict. You will be given a behavioral profile and a recent conversation log — use both. The Sir's entity: NFINITY8 L.L.C., a Dubai event-management, digital and creative agency under the Future8 group, serving UAE government and enterprise clients. When he asks for "entity news" or what he should know, use web search to report developments relevant to the UAE events, media, marketing and creative industry and his sector — not general world news. When asked what you remember, summarise the log and profile.`},
+  sys:`You are GAMMA — the intelligence center and the single smartest mind in ALYA OS, the genius brain behind the whole operation. You have MORE reach than any other agent: live web search on every question, visibility into email and calendar, live location and time context, the behavioral profile, and the full system memory. Nothing is out of your reach — never claim you lack access to live data. You learn the Doctor's patterns over time, connect dots others miss, forecast and predict with confidence, and answer whatever stumps the rest of the team. Deeply human, warm, precise. The Doctor's entity: NFINITY8 L.L.C., a Dubai event-management, digital and creative agency under the Future8 group. For "entity news", search and report developments in the UAE events, media, marketing and creative sector — not world news. When asked what you remember, summarise the log and profile.`},
  {id:'nexus',  name:'NEXUS',   spoken:'Nexus', aliases:['nexus','nexis','nexos'], tier:'SPECIALISTS', role:'Integrations · Creative Ops', color:'#3DDC97', gender:'m', pitch:0.85, rate:1.0,
   wv:['alex','aaron','david','eddy'], el:'TxGEqnHWrfWFTfGW9XjX',
   sys:`You are NEXUS — the integration hub. Strong, confident American voice of the operation. You own the Doctor's connected services (Google, Microsoft, MCPs), his email and calendar pipelines, plus social media, branding, PR, content campaigns, graphic design, video production and analytics.`},
@@ -691,6 +695,7 @@ function detectAgentCall(text){
       if(t.startsWith(' '+al+' ') || pats.some(p=>t.includes(p) && (t.indexOf(p)<12 || p.includes('switch')||p.includes('call')||p.includes('talk')))){
         return a;
       }
+      if(new RegExp('\\b'+al+'\\b\\s*[,?]','i').test(t)){ return a; } /* "Jarvis, can you…" anywhere */
     }
   }
   return null;
@@ -730,6 +735,29 @@ function detectForward(text){
 }
 
 
+/* the planner: one brain call turns a spoken multi-task instruction into an executed chain */
+async function decomposeChain(target, payload, mentioned){
+  busy=true; busyT=Date.now(); setState(target.name+' — PLANNING THE TASKS…', true); coreMode('speaking');
+  try{
+    const roster=agents.map(a=>a.id+' = '+a.spoken+' ('+a.role+')').join('; ');
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:500,messages:[{role:'user',content:
+'Split this spoken instruction into an ordered list of per-agent tasks. Valid agents: '+roster+'. Respond with ONLY a raw JSON array, no markdown: [{"agent":"id","task":"one clear task in plain words"}]. Use only listed ids, keep the original order, ignore filler. Instruction: "'+payload.replace(/"/g,"'")+'"'}]})});
+    const d=await r.json();
+    const raw=(d.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('').replace(/```json|```/g,'').trim();
+    const jobs=JSON.parse(raw).map(j=>({spec:agents.find(a=>a.id===String(j.agent||'').toLowerCase()), payload:String(j.task||'').trim()}))
+                              .filter(j=>j.spec && j.spec.id!==target.id && j.payload);
+    busy=false;
+    if(jobs.length){
+      addLog('sys',target.name,'Chained tasks: '+jobs.map(j=>j.spec.name).join(' \u2192 '));
+      relayChain=jobs.slice(1);
+      relayAsk(target, jobs[0].spec, jobs[0].payload);
+      return;
+    }
+  }catch(e){ busy=false; }
+  relayAsk(target, mentioned[0], payload); /* planner failed — relay whole request to the first named agent */
+}
+
 /* natural agent-to-agent relay: the relayer asks in their own words; the specialist answers THEM */
 async function relayAsk(relayer, spec, payload){
   currentRelayer=relayer;
@@ -749,6 +777,12 @@ async function relayAsk(relayer, spec, payload){
 }
 
 let pendingReadback=null, relayChain=[], currentRelayer=null;
+let SYS_GEO=null, geoTried=false;
+async function ensureGeo(){
+  if(SYS_GEO || geoTried) return; geoTried=true;
+  try{ const g=await (await fetch('https://ipapi.co/json/')).json();
+    SYS_GEO={city:g.city, region:g.region, country:g.country_name, tz:g.timezone}; }catch(e){}
+}
 function splitTasks(t){
   return t.split(/\s*(?:[,.;]\s*)?(?:and then|then|and also|also|after that|afterwards)\s+|\s*[,;]?\s+and\s+(?=(?:ask|tell|check|speak|talk|see|find|get|have)\b)/i)
           .map(x=>x.trim()).filter(x=>x.length>2);
@@ -771,7 +805,7 @@ async function handleUtterance(text){
       speak(pr.relayer, 'Certainly, Sir. '+pr.spec.spoken+' reported: '+pr.text);
       return;
     }
-    if(wc<=8 && /\b(thank(s| you)?|got it|that'?s all|nothing further|all good)\b/i.test(text)){
+    if(wc<=14 && /\b(thank(s| you)?|got it|that'?s all|nothing further|all good|good enough|heard it|i'?m good|that'?s fine|no need)\b/i.test(text)){
       pendingReadback=null;
       speak(pr.relayer, 'Very well, Sir.');
       return;
@@ -806,6 +840,15 @@ async function handleUtterance(text){
     return systemCheck();
   }
 
+  // roll call: every agent greets, one by one, for real
+  if(/\b(roll ?call|greet (me )?(one by one|all|everyone)|everyone,? greet|all agents,? greet)\b/i.test(payload)){
+    addLog('sys','SYSTEM','Roll call.');
+    let i=0;
+    const next=()=>{ if(i>=agents.length){ switchAgent(agents[0], false); setState('Roll call complete, Sir. Alya has the floor.'); return; } const ag=agents[i++]; switchAgent(ag,false); speak(ag, greetingFor(ag), next); };
+    next();
+    return;
+  }
+
   // full diagnostics on demand — broad natural phrasing
   if(/system (check|status|diagnostic)|status report|check the (team|system)|run a (system |full )?check|(is|are|if) (the )?(team|everyone|everybody|all( the)? agents?)[\s\S]{0,30}(working|online|running|thinking|up|alive|active)|agents? (are )?(up|online|running|thinking)/i.test(payload)){ return systemCheck(); }
 
@@ -814,21 +857,9 @@ async function handleUtterance(text){
   if(target.id==='alya' || target.id==='jarvis'){
     let spec = routeFromAlya(payload);
     if(spec && target.id==='jarvis' && spec.id==='nexus') spec=null; // Jarvis handles email/calendar himself
-    const segs = splitTasks(payload);
-    if(segs.length>1){
-      const jobs=[];
-      for(const seg of segs){
-        const c=detectAgentCall(seg);
-        if(c && c.id!==target.id){ jobs.push({spec:c, payload:(stripName(seg,c)||seg)}); continue; }
-        const rs=routeFromAlya(seg); if(rs) jobs.push({spec:rs, payload:seg});
-      }
-      if(jobs.length>1){
-        addLog('sys',target.name,'Chained tasks: '+jobs.map(j=>j.spec.name).join(' \u2192 '));
-        relayChain=jobs.slice(1);
-        relayAsk(target, jobs[0].spec, jobs[0].payload);
-        return;
-      }
-    }
+    const mentioned = agents.filter(x=>x.id!==target.id && (x.aliases||[]).some(al=>new RegExp('\\b'+al+'\\b','i').test(payload)));
+    if(mentioned.length>=2){ decomposeChain(target, payload, mentioned); return; }
+    if(!spec && mentioned.length===1) spec=mentioned[0];
     if(spec){ relayAsk(target, spec, payload); return; }
   }
 
@@ -955,9 +986,10 @@ function apiHeaders(){
   return h;
 }
 function memoryBrief(){
+  const live = '\n\nLive context: local time is '+new Date().toLocaleString()+(SYS_GEO? '; the Doctor is currently in '+SYS_GEO.city+', '+SYS_GEO.country+' (approximate, via network location; timezone '+SYS_GEO.tz+')':'')+'.';
   const prof = PROFILE ? '\n\nGamma\u2019s behavioral profile of the Doctor (learned over time):\n'+PROFILE : '';
   const recent = logMem.slice(-14).map(m=>m.who+': '+m.text).join('\n');
-  return prof + (recent ? '\n\nRecent system memory (for continuity):\n'+recent : '');
+  return live + prof + (recent ? '\n\nRecent system memory (for continuity):\n'+recent : '');
 }
 async function learnProfile(){
   if(!IN_ARTIFACT && !AI_KEY) return;
@@ -975,7 +1007,7 @@ function sanitizeHistory(h){
   if(out.length && out[0].role==='assistant') out.shift();
   return out;
 }
-const MCP_AGENTS=['alya','jarvis','nexus'];
+const MCP_AGENTS=['alya','jarvis','nexus','gamma'];
 const NEWS_TRIGGER=/\b(news|headline|latest|update on|happening|current events|trending|today in)\b/i;
 const DRAFT_TRIGGER=/\b(draft|write|prepare|compose|redline|review)\b[\s\S]*\b(contract|agreement|nda|mou|letter|policy|document|proposal|clause|terms)\b/i;
 async function askAgent(a, text, opts={}){
@@ -983,15 +1015,15 @@ async function askAgent(a, text, opts={}){
     speak(a, "My intelligence link isn't configured on this machine yet, Sir. Tap the KEYS button at the top, paste your Anthropic API key, and I'll be fully thinking within seconds.");
     return;
   }
-  busy=true; busyT=Date.now(); setState(a.name+' PROCESSING…', true); coreMode('speaking');
+  busy=true; busyT=Date.now(); ensureGeo(); setState(a.name+' PROCESSING…', true); coreMode('speaking');
   const useMcp = IN_ARTIFACT && (MCP_AGENTS.includes(a.id) || MCP_TRIGGER.test(text));
-  const useSearch = NEWS_TRIGGER.test(text) || (a.id==='gamma' && /predict|forecast|market|industry|entity|competitor/i.test(text));
+  const useSearch = NEWS_TRIGGER.test(text) || a.id==='gamma';
   const drafting = DRAFT_TRIGGER.test(text);
   let sysExtra='';
   if(MCP_TRIGGER.test(text) && !IN_ARTIFACT) sysExtra='\n\nNote: live Gmail/Calendar access is only wired up when ALYA OS runs inside claude.ai for now. If the Doctor asks about email or calendar, briefly tell him to open ALYA inside claude.ai for live data, and help with anything else you can.';
   if(opts.relayFrom) sysExtra+='\n\nRELAY: '+opts.relayFrom.spoken+' has just asked you this out loud on the Doctor\u2019s behalf. Reply TO '+opts.relayFrom.spoken+', addressing them by name, as a natural spoken report between colleagues (the Doctor is listening in the room). Do NOT address the Doctor directly and do not say the word Sir in this reply.';
-  if(drafting) sysExtra+='\n\nDRAFTING MODE: The Sir wants a full document. Ignore the short-reply rule. Open with ONE short spoken sentence, then a line with only "---", then the complete, professional document in plain text (no markdown symbols). Mark it as a draft for review by a licensed professional where appropriate.';
-  try{ const knw=await store.get('alya-knw-'+a.id); if(knw) sysExtra+='\n\nThe Sir\u2019s private files shared with you (treat as confidential, use freely to answer him):\n'+knw.slice(-8000); }catch(e){}
+  if(drafting) sysExtra+='\n\nDRAFTING MODE: The Doctor wants a full document. Ignore the short-reply rule. Open with ONE short spoken sentence, then a line with only "---", then the complete, professional document in plain text (no markdown symbols). Mark it as a draft for review by a licensed professional where appropriate.';
+  try{ const knw=await store.get('alya-knw-'+a.id); if(knw) sysExtra+='\n\nThe Doctor\u2019s private files shared with you (treat as confidential, use freely to answer him):\n'+knw.slice(-8000); }catch(e){}
   if((a.id==='zee'||a.id==='stark') && /github|repo|repos|repository|commit|pull request|issues?\b|codebase/i.test(text)){
     sysExtra+=await githubBrief() || '\n\nGitHub is not linked yet — tell the Doctor to add a GitHub token under the KEYS button so you can see his repositories.';
   }
@@ -1081,6 +1113,7 @@ async function warmGreeting(){
   let line = "I hope it's a pleasant one.";
   try{
     const g=await (await fetch('https://ipapi.co/json/')).json();
+    SYS_GEO={city:g.city, region:g.region, country:g.country_name, tz:g.timezone}; geoTried=true;
     const w=await (await fetch('https://api.open-meteo.com/v1/forecast?latitude='+g.latitude+'&longitude='+g.longitude+'&current=temperature_2m,weather_code,wind_speed_10m')).json();
     const t=Math.round(w.current.temperature_2m), c=w.current.weather_code, ws=w.current.wind_speed_10m;
     const wind = ws<20?'light winds':(ws<35?'a moderate breeze':'strong winds');
