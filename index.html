@@ -173,7 +173,7 @@
 </div>
 <div id="app">
   <header>
-    <div class="brand"><h1>ALYA</h1><small>OPERATING SYSTEM · v4.4 EVERY APP</small></div>
+    <div class="brand"><h1>ALYA</h1><small>OPERATING SYSTEM · v4.5 DIRECT</small></div>
     <div class="hstat mono">
       <span><span class="dot"></span>ONLINE</span>
       <span id="clock">--:--</span>
@@ -744,7 +744,9 @@ const DOMAINS = [
  ['morgan',   /\b(budget|financ|cash flow|profit|revenue|invoice|tax|pricing|cost|aed|money)\b/i],
  ['nexus',    /\b(email|inbox|mail|calendar|schedule|meeting|social media|campaign|brand|branding|video|post|design|instagram|youtube|analytics)\b/i]
 ];
+const MACHINE_RX=/^\s*(?:(?:please|could you|can you|would you|i want you to|i'?d like you to)\s+)?(open|launch|start|run|quit|close|exit|reveal|mute|unmute|volume|lock|screenshot)\b/i;
 function routeFromAlya(payload){
+  if(MACHINE_RX.test(payload)) return null;
   for(const [id,rx] of DOMAINS){
     if(rx.test(payload)){ return agents.find(x=>x.id===id) || null; }
   }
@@ -856,9 +858,7 @@ function splitTasks(t){
 function bridgeBack(relayer, spec, replyText){
   if(relayChain.length){ const nxt=relayChain.shift(); relayAsk(relayer, nxt.spec, nxt.payload); return; }
   currentRelayer=null;
-  switchAgent(relayer, false);
-  pendingReadback={relayer:relayer, spec:spec, text:replyText};
-  speak(relayer, 'Sir, is there anything further, or shall I read back '+spec.spoken+'\u2019s reply?');
+  switchAgent(relayer, false);   /* the specialist spoke to Sir directly — no read-back needed */
 }
 async function handleUtterance(text){
   if(busy) return;
@@ -904,9 +904,15 @@ async function handleUtterance(text){
   const askOther = payload.match(/\b(?:ask|tell|get|have)\s+(\w+)\s+(?:to\s+)?(open|launch|start|close|quit|reveal|show|list|mute|unmute|lock|screenshot)\b(.*)$/i);
   if(askOther){ sysText = askOther[2] + (askOther[3]||''); }
   lastSysFail=null;
+  if(MACHINE_RX.test(sysText)) addLog('sys','SYSTEM','Machine command detected: \u201C'+sysText+'\u201D \u2192 daemon');
   const sysres = await trySystemCommand(sysText);
   if(sysres!==null){ speak(target, sysres); return; }
   if(lastSysFail){ return systemRepair(target, lastSysFail.text, lastSysFail.err); }
+  if(MACHINE_RX.test(sysText)){
+    speak(target, !SYS_KEY ? 'System control is not set up yet, Sir — the token is missing in the KEYS panel.'
+      : 'I could not reach your Mac, Sir. Please check the ALYA daemon is running in Terminal.');
+    return;
+  }
 
   // agent creation intent → handled by Alya regardless of who's active
   if(/\b(create|make|build|add)\b.*\bagent\b/i.test(payload)){ return createAgentByVoice(payload); }
@@ -937,7 +943,7 @@ async function handleUtterance(text){
   {
     let spec = (target.id==='alya'||target.id==='jarvis') ? routeFromAlya(payload) : null;
     if(spec && target.id==='jarvis' && spec.id==='nexus') spec=null; // Jarvis handles email/calendar himself
-    const mentioned = agents.filter(x=>x.id!==target.id && (x.aliases||[]).some(al=>new RegExp('\\b'+al+'\\b','i').test(payload)));
+    const mentioned = MACHINE_RX.test(payload) ? [] : agents.filter(x=>x.id!==target.id && (x.aliases||[]).some(al=>new RegExp('\\b'+al+'\\b','i').test(payload)));
     if(mentioned.length>=2){ decomposeChain(target, payload, mentioned); return; }
     if(!spec && mentioned.length===1) spec=mentioned[0];
     if(spec){ relayAsk(target, spec, payload); return; }
@@ -1269,7 +1275,7 @@ async function askAgent(a, text, opts={}){
   const drafting = DRAFT_TRIGGER.test(text);
   let sysExtra='';
   if(MCP_TRIGGER.test(text) && !IN_ARTIFACT) sysExtra='\n\nNote: live Gmail/Calendar access is only wired up when ALYA OS runs inside claude.ai for now. If the Doctor asks about email or calendar, briefly tell him to open ALYA inside claude.ai for live data, and help with anything else you can.';
-  if(opts.relayFrom) sysExtra+='\n\nRELAY: '+opts.relayFrom.spoken+' has just asked you this out loud on the Doctor\u2019s behalf. Reply TO '+opts.relayFrom.spoken+', addressing them by name, as a natural spoken report between colleagues (the Doctor is listening in the room). Do NOT address the Doctor directly and do not say the word Sir in this reply. NEVER repeat, quote or echo the question you were just asked \u2014 ANSWER it with real substance from your own expertise.';
+  if(opts.relayFrom) sysExtra+='\n\nRELAY: '+opts.relayFrom.spoken+' has just asked you this out loud on the Doctor\u2019s behalf. Sir is right here listening. Acknowledge '+opts.relayFrom.spoken+' by name in a few words if it feels natural, then speak DIRECTLY TO SIR with your answer (\u201CSir, \u2026\u201D). Never ask '+opts.relayFrom.spoken+' to pass anything on to Sir, and never refer to Sir in the third person. NEVER repeat, quote or echo the question you were just asked \u2014 ANSWER it with real substance from your own expertise.';
   if(drafting) sysExtra+='\n\nDRAFTING MODE: The Doctor wants a full document. Ignore the short-reply rule. Open with ONE short spoken sentence, then a line with only "---", then the complete, professional document in plain text (no markdown symbols). Mark it as a draft for review by a licensed professional where appropriate.';
   try{ const knw=await store.get('alya-knw-'+a.id); if(knw) sysExtra+='\n\nThe Doctor\u2019s private files shared with you (treat as confidential, use freely to answer him):\n'+knw.slice(-8000); }catch(e){}
   if((a.id==='zee'||a.id==='stark') && /github|repo|repos|repository|commit|pull request|issues?\b|codebase/i.test(text)){
@@ -1367,14 +1373,18 @@ async function warmGreeting(){
   try{
     const g=await (await fetch('https://ipapi.co/json/')).json();
     SYS_GEO={city:g.city, region:g.region, country:g.country_name, tz:g.timezone}; geoTried=true;
-    const w=await (await fetch('https://api.open-meteo.com/v1/forecast?latitude='+g.latitude+'&longitude='+g.longitude+'&current=temperature_2m,weather_code,wind_speed_10m')).json();
+    const w=await (await fetch('https://api.open-meteo.com/v1/forecast?latitude='+g.latitude+'&longitude='+g.longitude+'&current=temperature_2m,weather_code,wind_speed_10m,is_day')).json();
     const t=Math.round(w.current.temperature_2m), c=w.current.weather_code, ws=w.current.wind_speed_10m;
+    const day = w.current.is_day===1;
     const wind = ws<20?'light winds':(ws<35?'a moderate breeze':'strong winds');
-    if(c<=1)       line = "Today is a very beautiful day. It's sunny with a temperature of "+t+" degrees Celsius and "+wind+".";
-    else if(c<=3)  line = "Today is a calm, cloudy day, with a temperature of "+t+" degrees Celsius and "+wind+".";
-    else if(c>=95) line = "We have storms around today — "+t+" degrees Celsius with "+wind+", so take care out there.";
-    else if(c>=51) line = "We have some rain today — "+t+" degrees Celsius with "+wind+".";
-    else           line = "It's a hazy day today — "+t+" degrees Celsius with "+wind+".";
+    if(c<=1)       line = day ? "Today is a very beautiful day. It's sunny with a temperature of "+t+" degrees Celsius and "+wind+"."
+                              : "It's a clear night, "+t+" degrees Celsius with "+wind+".";
+    else if(c<=3)  line = day ? "It's a calm, cloudy day, "+t+" degrees Celsius with "+wind+"."
+                              : "It's a cloudy night, "+t+" degrees Celsius with "+wind+".";
+    else if(c>=95) line = "There are storms about \u2014 "+t+" degrees Celsius with "+wind+", so do take care.";
+    else if(c>=51) line = day ? "We have some rain today \u2014 "+t+" degrees Celsius with "+wind+"."
+                              : "It's raining out there tonight \u2014 "+t+" degrees Celsius with "+wind+".";
+    else           line = (day?"It's a hazy day, ":"It's hazy out tonight, ")+t+" degrees Celsius with "+wind+".";
   }catch(e){}
   return 'Good '+part+', Sir. How are you doing this '+part+'? '+line+' What can I do for you today, Sir?';
 }
