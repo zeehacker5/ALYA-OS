@@ -173,7 +173,7 @@
 </div>
 <div id="app">
   <header>
-    <div class="brand"><h1>ALYA</h1><small>OPERATING SYSTEM · v3.3 NATURAL FLOW</small></div>
+    <div class="brand"><h1>ALYA</h1><small>OPERATING SYSTEM · v3.4 TRUE CHAIN</small></div>
     <div class="hstat mono">
       <span><span class="dot"></span>ONLINE</span>
       <span id="clock">--:--</span>
@@ -246,7 +246,7 @@
    Specialists: Nexus · Stark · ZEE · Dr. Hannah · Morgan · Atlas · Jonathan
 =============================================================*/
 
-const GLOBAL_RULES = `You are one agent inside "ALYA OS", a private multi-agent assistant built for Dr. Captain Mohamed Al Mubarak, CEO of NFINITY8 (Dubai event-management & creative agency). When speaking directly to him, address him ONLY as "Sir". When mentioning him while speaking to another agent, refer to him as "the Doctor". Never say "Captain". Your replies are spoken aloud by text-to-speech, so keep them SHORT and natural — 1 to 3 spoken sentences unless Sir explicitly asks for detail. Never use markdown, bullets, or emojis.
+const GLOBAL_RULES = `You are one agent inside "ALYA OS", a private multi-agent assistant built for Dr. Captain Mohamed Al Mubarak, CEO of NFINITY8 (Dubai event-management & creative agency). When speaking directly to him, address him ONLY as "Sir". When mentioning him while speaking to another agent, refer to him as "the Doctor". Never say "Captain". IDENTITY LAW: you are exactly ONE named agent — never answer as, speak for, or pretend to be any other agent, especially after an interruption. Team genders: Alya, Gamma, Doctor Hannah and Atlas are women (she/her); Jarvis, Nexus, Stark, ZEE, Morgan and Jonathan are men (he/him). Your replies are spoken aloud by text-to-speech, so keep them SHORT and natural — 1 to 3 spoken sentences unless Sir explicitly asks for detail. Never use markdown, bullets, or emojis.
 
 ABSOLUTE RULE — NEVER DROP THE SIR'S QUESTION: you must always either (a) answer it directly to the best of your ability, or (b) ask him ONE short clarifying question. Never refuse, never deflect, never reply that another agent should handle it instead of answering. If the topic is another agent's specialty, still give your best brief answer first, then you may add that the specialist can go deeper.
 
@@ -576,7 +576,7 @@ function buildRec(){
       if(r.isFinal){
         if(speaking){
           if(isEcho(t)) continue;               /* her own voice bouncing back — drop it */
-          stopSpeaking();                        /* the Doctor is talking — shut up and listen */
+          stopSpeaking(); if(currentRelayer){ switchAgent(currentRelayer, false); }                        /* the Doctor is talking — shut up and listen */
           hotUntil=Date.now()+15000;
           setState('GO AHEAD, SIR — LISTENING.', true);
           pendBuf+=(pendBuf?' ':'')+t;
@@ -630,6 +630,7 @@ function stopSpeaking(){
 }
 function interrupt(){
   stopSpeaking();
+  if(currentRelayer){ switchAgent(currentRelayer, false); }
   hotUntil = Date.now()+9000;
   earsPaused=false; startListening();
   setState('GO AHEAD, SIR — LISTENING.', true); coreMode('listening');
@@ -731,6 +732,7 @@ function detectForward(text){
 
 /* natural agent-to-agent relay: the relayer asks in their own words; the specialist answers THEM */
 async function relayAsk(relayer, spec, payload){
+  currentRelayer=relayer;
   busy=true; busyT=Date.now(); setState(relayer.name+' \u2192 '+spec.name+'\u2026', true); coreMode('speaking');
   let line = spec.spoken+', I need your read on something for the Doctor.';
   try{
@@ -746,8 +748,15 @@ async function relayAsk(relayer, spec, payload){
   speak(relayer, line, ()=>{ switchAgent(spec,false); askAgent(spec, payload, {relayFrom:relayer}); });
 }
 
-let pendingReadback=null;
+let pendingReadback=null, relayChain=[], currentRelayer=null;
+function splitTasks(t){
+  return t.split(/\s*(?:[,.;]\s*)?(?:and then|then|and also|also|after that|afterwards)\s+|\s*[,;]?\s+and\s+(?=(?:ask|tell|check|speak|talk|see|find|get|have)\b)/i)
+          .map(x=>x.trim()).filter(x=>x.length>2);
+}
 function bridgeBack(relayer, spec, replyText){
+  if(relayChain.length){ const nxt=relayChain.shift(); relayAsk(relayer, nxt.spec, nxt.payload); return; }
+  currentRelayer=null;
+  switchAgent(relayer, false);
   pendingReadback={relayer:relayer, spec:spec, text:replyText};
   speak(relayer, 'Sir, is there anything further, or shall I read back '+spec.spoken+'\u2019s reply?');
 }
@@ -805,6 +814,21 @@ async function handleUtterance(text){
   if(target.id==='alya' || target.id==='jarvis'){
     let spec = routeFromAlya(payload);
     if(spec && target.id==='jarvis' && spec.id==='nexus') spec=null; // Jarvis handles email/calendar himself
+    const segs = splitTasks(payload);
+    if(segs.length>1){
+      const jobs=[];
+      for(const seg of segs){
+        const c=detectAgentCall(seg);
+        if(c && c.id!==target.id){ jobs.push({spec:c, payload:(stripName(seg,c)||seg)}); continue; }
+        const rs=routeFromAlya(seg); if(rs) jobs.push({spec:rs, payload:seg});
+      }
+      if(jobs.length>1){
+        addLog('sys',target.name,'Chained tasks: '+jobs.map(j=>j.spec.name).join(' \u2192 '));
+        relayChain=jobs.slice(1);
+        relayAsk(target, jobs[0].spec, jobs[0].payload);
+        return;
+      }
+    }
     if(spec){ relayAsk(target, spec, payload); return; }
   }
 
@@ -835,7 +859,7 @@ async function startProEars(){
     if(!proActive && proVoiced>=3){
       proActive=true; proWasAgentTalking=(speechSynthesis.speaking||!!curAudio);
       if(proWasAgentTalking){ /* echo-cancelled mic: real voice = Sir speaking. Stop INSTANTLY. */
-        stopSpeaking(); hotUntil=Date.now()+15000; setState('GO AHEAD, SIR — LISTENING.', true);
+        stopSpeaking(); if(currentRelayer){ switchAgent(currentRelayer, false); } hotUntil=Date.now()+15000; setState('GO AHEAD, SIR — LISTENING.', true);
       }
       proChunks=[];
       try{ proRec=new MediaRecorder(proStream,{mimeType:'audio/webm'}); }catch(e){ proRec=new MediaRecorder(proStream); }
@@ -856,6 +880,7 @@ async function transcribePro(blob){
     const fd=new FormData();
     fd.append('file', blob, 'speech.webm');
     fd.append('model_id','scribe_v1');
+    fd.append('language_code','en');
     const ctl=new AbortController(); const tmo=setTimeout(()=>ctl.abort(),10000);
     const res=await fetch('https://api.elevenlabs.io/v1/speech-to-text',{method:'POST',headers:{'xi-api-key':EL_KEY},body:fd,signal:ctl.signal});
     clearTimeout(tmo);
