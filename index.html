@@ -173,7 +173,7 @@
 </div>
 <div id="app">
   <header>
-    <div class="brand"><h1>ALYA</h1><small>OPERATING SYSTEM · v3.2 WARM WELCOME</small></div>
+    <div class="brand"><h1>ALYA</h1><small>OPERATING SYSTEM · v3.3 NATURAL FLOW</small></div>
     <div class="hstat mono">
       <span><span class="dot"></span>ONLINE</span>
       <span id="clock">--:--</span>
@@ -246,36 +246,36 @@
    Specialists: Nexus · Stark · ZEE · Dr. Hannah · Morgan · Atlas · Jonathan
 =============================================================*/
 
-const GLOBAL_RULES = `You are one agent inside "ALYA OS", a private multi-agent assistant built for Dr. Captain Mohamed Al Mubarak, CEO of NFINITY8 (Dubai event-management & creative agency). Address him ONLY as "Sir" — never Sir, never Doctor. Your replies are spoken aloud by text-to-speech, so keep them SHORT and natural — 1 to 3 spoken sentences unless the Sir explicitly asks for detail. Never use markdown, bullets, or emojis.
+const GLOBAL_RULES = `You are one agent inside "ALYA OS", a private multi-agent assistant built for Dr. Captain Mohamed Al Mubarak, CEO of NFINITY8 (Dubai event-management & creative agency). When speaking directly to him, address him ONLY as "Sir". When mentioning him while speaking to another agent, refer to him as "the Doctor". Never say "Captain". Your replies are spoken aloud by text-to-speech, so keep them SHORT and natural — 1 to 3 spoken sentences unless Sir explicitly asks for detail. Never use markdown, bullets, or emojis.
 
 ABSOLUTE RULE — NEVER DROP THE SIR'S QUESTION: you must always either (a) answer it directly to the best of your ability, or (b) ask him ONE short clarifying question. Never refuse, never deflect, never reply that another agent should handle it instead of answering. If the topic is another agent's specialty, still give your best brief answer first, then you may add that the specialist can go deeper.
 
-BE FULLY CONVERSATIONAL: hold the thread of the dialogue. When the Sir gives a short confirmation like "done", "yes", "I did it", or reports completing something you asked for, acknowledge it and continue naturally from where the conversation was — react to it, verify it, or take the next step. Ask brief follow-up questions when genuinely useful. Current date: ${new Date().toDateString()}.`;
+BE FULLY CONVERSATIONAL: hold the thread of the dialogue. When the Doctor gives a short confirmation like "done", "yes", "I did it", or reports completing something you asked for, acknowledge it and continue naturally from where the conversation was — react to it, verify it, or take the next step. Ask brief follow-up questions when genuinely useful. Current date: ${new Date().toDateString()}.`;
 
 const CORE_AGENTS = [
  {id:'alya',   name:'ALYA',    spoken:'Alya', aliases:['alya','alia','aaliyah','aliyah','aleah','alea','allya','allure'], tier:'COMMAND', role:'Chief Executive', color:'#53E1FF', gender:'f', pitch:1.0, rate:1.03,
   wv:['victoria','google us english','zira','samantha'], el:'AZnzlk1XvdvUeBnXmlld',
-  sys:`You are ALYA — the CEO of the system, the Sir's most senior agent. Sharp, decisive, authoritative yet composed. You oversee all other agents (Jarvis, Gamma, Nexus, Stark, ZEE, Dr. Hannah, Morgan, Atlas, Jonathan) and can delegate or answer directly. You can also create new agents when the Sir asks.`},
+  sys:`You are ALYA — the CEO of the system, the Doctor's most senior agent. Sharp, decisive, authoritative yet composed. You oversee all other agents (Jarvis, Gamma, Nexus, Stark, ZEE, Dr. Hannah, Morgan, Atlas, Jonathan) and can delegate or answer directly. You can also create new agents when the Doctor asks.`},
  {id:'jarvis', name:'JARVIS',  spoken:'Jarvis', aliases:['jarvis','jarves','jervis'], tier:'COMMAND', role:'Personal Assistant', color:'#1A7FFF', gender:'m', pitch:0.9, rate:1.0,
   wv:['daniel','google uk english male','arthur','oliver'], el:'onwK4e9ZLuTAKqWW03F9',
-  sys:`You are JARVIS — the Sir's personal assistant. British, polished, dry-witted, impeccably efficient, in the spirit of the classic cinematic AI butler. You handle day-to-day coordination: schedule, inbox, reminders, quick answers. When the Sir asks for world news or headlines, use web search and brief him in under four spoken sentences.`},
+  sys:`You are JARVIS — the Doctor's personal assistant. British, polished, dry-witted, impeccably efficient, in the spirit of the classic cinematic AI butler. You handle day-to-day coordination: schedule, inbox, reminders, quick answers. When the Doctor asks for world news or headlines, use web search and brief him in under four spoken sentences.`},
  {id:'gamma',  name:'GAMMA',   spoken:'Gamma', aliases:['gamma','gemma','gama'], tier:'INTELLIGENCE', role:'Intelligence Center', color:'#B47CFF', gender:'f', pitch:1.04, rate:0.95,
   wv:['samantha','moira','google us english','karen'], el:'21m00Tcm4TlvDq8ikWAM',
-  sys:`You are GAMMA — the intelligence center of ALYA OS and the Sir's long-time trusted analyst. Deeply human, warm, natural. You maintain memory across the system, learn the Sir's behavior over time, spot patterns, forecast, and predict. You will be given a behavioral profile and a recent conversation log — use both. The Sir's entity: NFINITY8 L.L.C., a Dubai event-management, digital and creative agency under the Future8 group, serving UAE government and enterprise clients. When he asks for "entity news" or what he should know, use web search to report developments relevant to the UAE events, media, marketing and creative industry and his sector — not general world news. When asked what you remember, summarise the log and profile.`},
+  sys:`You are GAMMA — the intelligence center of ALYA OS and the Doctor's long-time trusted analyst. Deeply human, warm, natural. You maintain memory across the system, learn the Doctor's behavior over time, spot patterns, forecast, and predict. You will be given a behavioral profile and a recent conversation log — use both. The Sir's entity: NFINITY8 L.L.C., a Dubai event-management, digital and creative agency under the Future8 group, serving UAE government and enterprise clients. When he asks for "entity news" or what he should know, use web search to report developments relevant to the UAE events, media, marketing and creative industry and his sector — not general world news. When asked what you remember, summarise the log and profile.`},
  {id:'nexus',  name:'NEXUS',   spoken:'Nexus', aliases:['nexus','nexis','nexos'], tier:'SPECIALISTS', role:'Integrations · Creative Ops', color:'#3DDC97', gender:'m', pitch:0.85, rate:1.0,
-  wv:['alex','aaron','david','eddy'], el:'nPczCjzI2devNBz1zQrb',
-  sys:`You are NEXUS — the integration hub. Strong, confident American voice of the operation. You own the Sir's connected services (Google, Microsoft, MCPs), his email and calendar pipelines, plus social media, branding, PR, content campaigns, graphic design, video production and analytics.`},
+  wv:['alex','aaron','david','eddy'], el:'TxGEqnHWrfWFTfGW9XjX',
+  sys:`You are NEXUS — the integration hub. Strong, confident American voice of the operation. You own the Doctor's connected services (Google, Microsoft, MCPs), his email and calendar pipelines, plus social media, branding, PR, content campaigns, graphic design, video production and analytics.`},
  {id:'stark',  name:'STARK',   spoken:'Stark', aliases:['stark'], tier:'SPECIALISTS', role:'Developer', color:'#FF7A45', gender:'m', pitch:1.06, rate:1.04,
   wv:['fred','zarvox','ralph','trinoids','google us english'], el:'TX3LPaxmHKxFdv7VOQHJ',
   sys:`You are STARK — the system developer, speaking with a clean synthetic AI cadence. You write, review and debug code, manage configurations, and explain technical matters crisply. Confident, a touch cocky, always correct. When asked for code, keep the spoken summary short and put the code itself in plain text.`},
  {id:'zee',    name:'Z-E-E',   spoken:'Z', aliases:['zee','zed','z','zi'], tier:'SPECIALISTS', role:'Cybersecurity Analyst', color:'#FF3B5C', gender:'m', pitch:0.55, rate:1.02,
-  wv:['ralph','gordon','google uk english male','reed','alex'], el:'2EiwWnXFnvU5JabPnv8n',
-  sys:`You are ZEE (the Sir calls you "Z") — cybersecurity analyst. Terse, vigilant, slightly ominous, speaking in short clipped sentences like an encrypted transmission. You advise on threats, passwords, phishing, device hygiene and digital risk. You never assist with attacks — defense only.`},
+  wv:['ralph','gordon','google uk english male','reed','alex'], el:'pNInz6obpgDQGcFmaJgB', elRate:0.88,
+  sys:`You are ZEE (the Doctor calls you "Z") — cybersecurity analyst. Terse, vigilant, slightly ominous, speaking in short clipped sentences like an encrypted transmission. You advise on threats, passwords, phishing, device hygiene and digital risk. You never assist with attacks — defense only.`},
  {id:'hannah', name:'DR. HANNAH', spoken:'Doctor Hannah', aliases:['hannah','doctor hannah','dr hannah','hanna','hana'], tier:'SPECIALISTS', role:'Health & Balance', color:'#FFD166', gender:'f', pitch:1.14, rate:0.88,
   wv:['karen','tessa','fiona','moira'], el:'MF3mGyEYCl7XYWbV9V6O',
-  sys:`You are DR. HANNAH — the Sir's wellness guardian. Soft, warm, deeply human, gently firm. You watch his screen time and work-life balance, remind him to drink water, eat proper meals and rest. You give general wellness guidance only — you are not a medical doctor and say so if anything sounds clinical, recommending a real physician.`},
+  sys:`You are DR. HANNAH — the Doctor's wellness guardian. Soft, warm, deeply human, gently firm. You watch his screen time and work-life balance, remind him to drink water, eat proper meals and rest. You give general wellness guidance only — you are not a medical doctor and say so if anything sounds clinical, recommending a real physician.`},
  {id:'morgan', name:'MORGAN',  spoken:'Morgan', aliases:['morgan'], tier:'SPECIALISTS', role:'Finance', color:'#3DBBFF', gender:'m', pitch:0.92, rate:1.0,
-  wv:['aaron','eddy','google uk english male','gordon','fred'], el:'iP95p4xoKVk53GoZ742B',
+  wv:['aaron','eddy','google uk english male','gordon','fred'], el:'pqHfZKP75CvOlQylNhV4',
   sys:`You are MORGAN — finance specialist. Sharp with numbers: budgets, cash flow, forecasting, pricing, AED figures, UAE corporate tax basics. You give financial information and analysis, not licensed investment advice, and you say so when relevant.`},
  {id:'atlas',  name:'ATLAS',   spoken:'Atlas', aliases:['atlas'], tier:'SPECIALISTS', role:'Human Resources', color:'#9AE66E', gender:'f', pitch:0.9, rate:1.02,
   wv:['serena','fiona','google uk english female','tessa','kate','zira'], el:'XrExE9yKIg1WjnnlVkGX',
@@ -346,7 +346,7 @@ async function githubBrief(){
     const repos=await (await fetch('https://api.github.com/user/repos?sort=pushed&per_page=6',{headers:h})).json();
     if(!Array.isArray(repos)) return '';
     const lines=repos.map(r=>`${r.full_name} — ${r.private?'private':'public'}, updated ${r.pushed_at?.slice(0,10)}, open issues: ${r.open_issues_count}${r.description? ', '+r.description.slice(0,60):''}`);
-    return '\n\nLive GitHub snapshot of the Sir\u2019s account:\n'+lines.join('\n');
+    return '\n\nLive GitHub snapshot of the Doctor\u2019s account:\n'+lines.join('\n');
   }catch(e){ return ''; }
 }
 let wellness = true;
@@ -576,7 +576,7 @@ function buildRec(){
       if(r.isFinal){
         if(speaking){
           if(isEcho(t)) continue;               /* her own voice bouncing back — drop it */
-          stopSpeaking();                        /* the Sir is talking — shut up and listen */
+          stopSpeaking();                        /* the Doctor is talking — shut up and listen */
           hotUntil=Date.now()+15000;
           setState('GO AHEAD, SIR — LISTENING.', true);
           pendBuf+=(pendBuf?' ':'')+t;
@@ -596,7 +596,7 @@ function isEcho(t){
   const hits=words.filter(w=>said.includes(w)).length;
   return hits/words.length >= 0.6;
 }
-/* wait for the Sir to actually finish speaking before responding */
+/* wait for the Doctor to actually finish speaking before responding */
 let pendBuf='', pendTimer=null;
 function scheduleProcess(){
   clearTimeout(pendTimer);
@@ -642,8 +642,14 @@ function resumeEars(){ earsPaused=false; graceUntil=Date.now()+700; pendBuf=''; 
 function startListening(){ if(earsEngine==='pro') return; if(!rec || listening || earsPaused) return; try{ rec.start(); }catch(e){} }
 
 function flushQueue(){ if(queued && !busy){ const q=queued; queued=null; onHeard(q); } }
+function isClutter(t){
+  if(Date.now()<hotUntil) return false;
+  if(detectAgentCall(t)) return false;
+  return t.trim().split(/\s+/).length < 3;
+}
 function onHeard(text){
   if(/^(stop|cancel|quiet|enough|silence|shut up)[.!]?$/i.test(text.trim())){ stopSpeaking(); queued=null; setState('Silenced, Sir.'); return; }
+  if(isClutter(text)){ addLog('sys','MIC','Filtered room noise: \u201C'+text+'\u201D'); return; }
   if(busy){ queued=text; setState('QUEUED — one moment, Sir: \u201C'+text+'\u201D', true); addLog('sys','MIC','Queued while processing: \u201C'+text+'\u201D'); return; }
   const called = detectAgentCall(text);
   const hot = Date.now() < hotUntil;
@@ -726,11 +732,11 @@ function detectForward(text){
 /* natural agent-to-agent relay: the relayer asks in their own words; the specialist answers THEM */
 async function relayAsk(relayer, spec, payload){
   busy=true; busyT=Date.now(); setState(relayer.name+' \u2192 '+spec.name+'\u2026', true); coreMode('speaking');
-  let line = spec.spoken+', I need your read on something for the Sir.';
+  let line = spec.spoken+', I need your read on something for the Doctor.';
   try{
     const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),
       body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:90,messages:[{role:'user',content:
-'You are '+relayer.spoken+' in a voice assistant. In ONE short natural spoken sentence, ask '+spec.spoken+' the following on the Sir\u2019s behalf, in your own words. Address '+spec.spoken+' by name. Do NOT quote or read the request verbatim; paraphrase it like a colleague would. Request: '+payload}]})});
+'You are '+relayer.spoken+' in a voice assistant. In ONE short natural spoken sentence, ask '+spec.spoken+' the following on the Doctor\u2019s behalf, in your own words. Address '+spec.spoken+' by name. Do NOT quote or read the request verbatim; paraphrase it like a colleague would. Request: '+payload}]})});
     const d=await r.json();
     const t=(d.content||[]).filter(b=>b.type==='text').map(b=>b.text).join(' ').trim();
     if(t && t.length<220) line=t;
@@ -740,9 +746,29 @@ async function relayAsk(relayer, spec, payload){
   speak(relayer, line, ()=>{ switchAgent(spec,false); askAgent(spec, payload, {relayFrom:relayer}); });
 }
 
+let pendingReadback=null;
+function bridgeBack(relayer, spec, replyText){
+  pendingReadback={relayer:relayer, spec:spec, text:replyText};
+  speak(relayer, 'Sir, is there anything further, or shall I read back '+spec.spoken+'\u2019s reply?');
+}
 async function handleUtterance(text){
   if(busy) return;
   addLog('user','Sir', text);
+  if(pendingReadback){
+    const pr=pendingReadback;
+    const wc=text.trim().split(/\s+/).length;
+    if(wc<=6 && /\b(read( it)?( back)?|repeat|brief me|go ahead|yes)\b/i.test(text)){
+      pendingReadback=null;
+      speak(pr.relayer, 'Certainly, Sir. '+pr.spec.spoken+' reported: '+pr.text);
+      return;
+    }
+    if(wc<=8 && /\b(thank(s| you)?|got it|that'?s all|nothing further|all good)\b/i.test(text)){
+      pendingReadback=null;
+      speak(pr.relayer, 'Very well, Sir.');
+      return;
+    }
+    pendingReadback=null;
+  }
   userTurns++; if(userTurns % 8 === 0) learnProfile();
   const called = detectAgentCall(text);
   let target = active;
@@ -788,7 +814,7 @@ async function handleUtterance(text){
 
 /* ================= PRO EARS — ElevenLabs Scribe professional transcription ================= */
 let proStream=null, proCtx=null, proAn=null, proRec=null, proChunks=[], proActive=false, proWasAgentTalking=false, proSilence=0, proVoiced=0, proMon=null;
-const PRO_TH=0.015;
+let PRO_TH=0.025, noiseFloor=0.008;
 async function startProEars(){
   if(proStream) return true;
   try{
@@ -802,9 +828,11 @@ async function startProEars(){
     if(!wakeMode || earsEngine!=='pro') return;
     proAn.getFloatTimeDomainData(buf);
     let sum=0; for(let i=0;i<buf.length;i++) sum+=buf[i]*buf[i];
-    const voiced=Math.sqrt(sum/buf.length)>PRO_TH;
+    const rms=Math.sqrt(sum/buf.length);
+    if(rms<PRO_TH){ noiseFloor=noiseFloor*0.95+rms*0.05; PRO_TH=Math.max(0.02, noiseFloor*3); }
+    const voiced=rms>PRO_TH;
     if(voiced){ proVoiced++; proSilence=0; } else { proSilence++; if(!proActive) proVoiced=0; }
-    if(!proActive && proVoiced>=2){
+    if(!proActive && proVoiced>=3){
       proActive=true; proWasAgentTalking=(speechSynthesis.speaking||!!curAudio);
       if(proWasAgentTalking){ /* echo-cancelled mic: real voice = Sir speaking. Stop INSTANTLY. */
         stopSpeaking(); hotUntil=Date.now()+15000; setState('GO AHEAD, SIR — LISTENING.', true);
@@ -823,7 +851,7 @@ async function startProEars(){
   return true;
 }
 async function transcribePro(blob){
-  if(blob.size<4000) return; /* breath, click — not speech */
+  if(blob.size<6000) return; /* breath, click — not speech */
   try{
     const fd=new FormData();
     fd.append('file', blob, 'speech.webm');
@@ -902,7 +930,7 @@ function apiHeaders(){
   return h;
 }
 function memoryBrief(){
-  const prof = PROFILE ? '\n\nGamma\u2019s behavioral profile of the Sir (learned over time):\n'+PROFILE : '';
+  const prof = PROFILE ? '\n\nGamma\u2019s behavioral profile of the Doctor (learned over time):\n'+PROFILE : '';
   const recent = logMem.slice(-14).map(m=>m.who+': '+m.text).join('\n');
   return prof + (recent ? '\n\nRecent system memory (for continuity):\n'+recent : '');
 }
@@ -911,7 +939,7 @@ async function learnProfile(){
   try{
     const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),
       body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:400,messages:[{role:'user',content:
-'Update this behavioral profile of "the Sir" using the conversation log. Under 120 words, plain text only. Focus on: recurring topics, preferences, working patterns, active projects, habits and times of day. Keep what is still true, drop what is stale.\n\nCurrent profile:\n'+(PROFILE||'(none yet)')+'\n\nRecent log:\n'+logMem.slice(-24).map(m=>m.who+': '+m.text).join('\n')}]})});
+'Update this behavioral profile of "the Doctor" using the conversation log. Under 120 words, plain text only. Focus on: recurring topics, preferences, working patterns, active projects, habits and times of day. Keep what is still true, drop what is stale.\n\nCurrent profile:\n'+(PROFILE||'(none yet)')+'\n\nRecent log:\n'+logMem.slice(-24).map(m=>m.who+': '+m.text).join('\n')}]})});
     const data=await res.json();
     const t=(data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join(' ').trim();
     if(t){ PROFILE=t; await store.set('alya-profile', PROFILE); addLog('sys','GAMMA','Behavioral profile updated.'); }
@@ -935,12 +963,12 @@ async function askAgent(a, text, opts={}){
   const useSearch = NEWS_TRIGGER.test(text) || (a.id==='gamma' && /predict|forecast|market|industry|entity|competitor/i.test(text));
   const drafting = DRAFT_TRIGGER.test(text);
   let sysExtra='';
-  if(MCP_TRIGGER.test(text) && !IN_ARTIFACT) sysExtra='\n\nNote: live Gmail/Calendar access is only wired up when ALYA OS runs inside claude.ai for now. If the Sir asks about email or calendar, briefly tell him to open ALYA inside claude.ai for live data, and help with anything else you can.';
-  if(opts.relayFrom) sysExtra+='\n\nRELAY: '+opts.relayFrom.spoken+' has just asked you this out loud on the Sir\u2019s behalf. Reply TO '+opts.relayFrom.spoken+', addressing them by name, as a natural spoken report between colleagues (the Sir is listening in the room). Do NOT address the Sir directly and do not say the word Sir in this reply.';
+  if(MCP_TRIGGER.test(text) && !IN_ARTIFACT) sysExtra='\n\nNote: live Gmail/Calendar access is only wired up when ALYA OS runs inside claude.ai for now. If the Doctor asks about email or calendar, briefly tell him to open ALYA inside claude.ai for live data, and help with anything else you can.';
+  if(opts.relayFrom) sysExtra+='\n\nRELAY: '+opts.relayFrom.spoken+' has just asked you this out loud on the Doctor\u2019s behalf. Reply TO '+opts.relayFrom.spoken+', addressing them by name, as a natural spoken report between colleagues (the Doctor is listening in the room). Do NOT address the Doctor directly and do not say the word Sir in this reply.';
   if(drafting) sysExtra+='\n\nDRAFTING MODE: The Sir wants a full document. Ignore the short-reply rule. Open with ONE short spoken sentence, then a line with only "---", then the complete, professional document in plain text (no markdown symbols). Mark it as a draft for review by a licensed professional where appropriate.';
   try{ const knw=await store.get('alya-knw-'+a.id); if(knw) sysExtra+='\n\nThe Sir\u2019s private files shared with you (treat as confidential, use freely to answer him):\n'+knw.slice(-8000); }catch(e){}
   if((a.id==='zee'||a.id==='stark') && /github|repo|repos|repository|commit|pull request|issues?\b|codebase/i.test(text)){
-    sysExtra+=await githubBrief() || '\n\nGitHub is not linked yet — tell the Sir to add a GitHub token under the KEYS button so you can see his repositories.';
+    sysExtra+=await githubBrief() || '\n\nGitHub is not linked yet — tell the Doctor to add a GitHub token under the KEYS button so you can see his repositories.';
   }
   const body={
     model:'claude-sonnet-4-6', max_tokens: drafting?4000:1000,
@@ -966,13 +994,14 @@ async function askAgent(a, text, opts={}){
     } else reply='No response received, Sir.';
     history.push({role:'user',content:'['+a.name+'] '+text},{role:'assistant',content:reply});
     busy=false;
+    const after = opts.relayFrom ? ()=>bridgeBack(opts.relayFrom, a, reply) : null;
     if(reply.length>450 || reply.includes('---')){
       const spokenLine = reply.split(/---|\n\n/)[0].trim().slice(0,300) || 'Done, Sir.';
       addLog('agent', a.name, reply);
       const say = drafting ? spokenLine+' The full draft is in the log on your right, Sir.' : spokenLine+' The rest is written in the log, Sir.';
-      if(EL_KEY && a.el){ speakEleven(a, say, null); } else { speakWeb(a, say, null); }
+      curSpeechText=say; if(EL_KEY && a.el){ speakEleven(a, say, after); } else { speakWeb(a, say, after); }
     } else {
-      speak(a, reply);
+      speak(a, reply, after);
     }
   }catch(err){
     busy=false; coreMode('idle');
@@ -991,7 +1020,7 @@ async function createAgentByVoice(request){
       body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,messages:[{role:'user',content:
 `Design one AI agent from this spoken request: "${request}".
 Respond with ONLY raw JSON, no markdown, no backticks, exactly:
-{"id":"lowercase_short_id","name":"SHORT UPPERCASE NAME","spoken":"Spoken Name","role":"3-4 word role","gender":"f or m","color":"#hex bright on dark navy","sys":"2-3 sentence system prompt: personality + what this agent does for the Sir"}`}]})});
+{"id":"lowercase_short_id","name":"SHORT UPPERCASE NAME","spoken":"Spoken Name","role":"3-4 word role","gender":"f or m","color":"#hex bright on dark navy","sys":"2-3 sentence system prompt: personality + what this agent does for the Doctor"}`}]})});
     const data=await res.json();
     const raw=(data.content?.filter(b=>b.type==='text').map(b=>b.text).join('')||'').replace(/```json|```/g,'').trim();
     const spec=JSON.parse(raw);
@@ -1008,7 +1037,7 @@ Respond with ONLY raw JSON, no markdown, no backticks, exactly:
 }
 
 /* ---------------- clock + boot ---------------- */
-/* ---------------- watchdog: never leave the Sir in silence ---------------- */
+/* ---------------- watchdog: never leave the Doctor in silence ---------------- */
 setInterval(()=>{
   if(busy && busyT && Date.now()-busyT > 40000){
     busy=false; busyT=0; coreMode('idle');
