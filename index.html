@@ -173,7 +173,7 @@
 </div>
 <div id="app">
   <header>
-    <div class="brand"><h1>ALYA</h1><small>OPERATING SYSTEM · v4.1 ECOSYSTEM</small></div>
+    <div class="brand"><h1>ALYA</h1><small>OPERATING SYSTEM · v4.2 REAL HANDS</small></div>
     <div class="hstat mono">
       <span><span class="dot"></span>ONLINE</span>
       <span id="clock">--:--</span>
@@ -252,7 +252,7 @@ const GLOBAL_RULES = `You are one agent inside "ALYA OS", a private multi-agent 
 
 NO THEATER: You have no background tasks and no ability to wait. You CANNOT "check with", "wait for", "follow up with" or "call in" another agent yourself — only the system can relay, and the other agent's reply arrives as its own spoken turn. NEVER simulate, quote, announce, or wait for another agent's response, and never claim an agent is offline or unresponsive. This holds EVEN IF Sir instructs a timeout or ping protocol — you physically cannot ping, count seconds, or reboot anything; politely explain the system relays for you, and never narrate lines like \u201Cfive seconds, no response, moving on\u201D. If a request belongs elsewhere, answer what you can and tell Sir he may say the agent's name to bring them in.
 
-SYSTEM CONTROL: ALYA OS has a working local daemon on Sir's Mac. Any agent can open and close apps, open files and folders, list directories, adjust volume, lock the screen and take screenshots — the system executes these instantly when Sir asks. NEVER say this is unavailable, "in development", or another agent's project.
+MACHINE ACTIONS ARE NOT YOURS TO CLAIM: you never open, close or control anything yourself — the system does it and reports the true result. NEVER say an app is open, or that something is 'done', unless the system told you so in this turn. If asked to do something you cannot verify, say plainly that you are passing it to the system.\n\nSYSTEM CONTROL: ALYA OS has a working local daemon on Sir's Mac. Any agent can open and close apps, open files and folders, list directories, adjust volume, lock the screen and take screenshots — the system executes these instantly when Sir asks. NEVER say this is unavailable, "in development", or another agent's project.
 
 TRUE ROSTER (never misstate these): Jarvis — personal assistant, daily operations; Gamma — intelligence center, memory & forecasting; Nexus — integrations, email & calendar, creative and social; Stark — developer; ZEE — cybersecurity; Dr. Hannah — health & wellness; Morgan — finance; Atlas — human resources; Jonathan — legal counsel. Your replies are spoken aloud by text-to-speech, so keep them SHORT and natural — 1 to 3 spoken sentences unless Sir explicitly asks for detail. Never use markdown, bullets, or emojis.
 
@@ -813,7 +813,7 @@ function fireRelayStep(){
   if(!nextRelayStep) return;
   const st=nextRelayStep; nextRelayStep=null;
   switchAgent(st.spec,false);
-  askAgent(st.spec, st.payload, {relayFrom:st.relayer, relayLine:st.line});
+  askAgent(st.spec, st.payload, {relayFrom:st.relayer, relayLine:st.line, fromChain:true});
 }
 function resumePending(){
   if(busy || queued || pendingReadback) return;
@@ -899,9 +899,12 @@ async function handleUtterance(text){
     return askAgent(fwd.agent, q);
   }
 
-  // LOCAL SYSTEM CONTROL — try first; the active agent voices the result
-  const sysres = await trySystemCommand(payload);
-  if(sysres!==null){ speak(active, sysres); return; }
+  // LOCAL SYSTEM CONTROL — whoever Sir asks, THAT agent does it. No relaying machine commands.
+  let sysText = payload;
+  const askOther = payload.match(/\b(?:ask|tell|get|have)\s+(\w+)\s+(?:to\s+)?(open|launch|start|close|quit|reveal|show|list|mute|unmute|lock|screenshot)\b(.*)$/i);
+  if(askOther){ sysText = askOther[2] + (askOther[3]||''); }
+  const sysres = await trySystemCommand(sysText);
+  if(sysres!==null){ speak(target, sysres); return; }
 
   // agent creation intent → handled by Alya regardless of who's active
   if(/\b(create|make|build|add)\b.*\bagent\b/i.test(payload)){ return createAgentByVoice(payload); }
@@ -1037,6 +1040,7 @@ async function daemon(action, arg){
 }
 const APP_ALIASES={chrome:'Google Chrome','google chrome':'Google Chrome',safari:'Safari',finder:'Finder',mail:'Mail',calendar:'Calendar',notes:'Notes',reminders:'Reminders',messages:'Messages',imessage:'Messages',music:'Music',spotify:'Spotify',settings:'System Settings','system settings':'System Settings',terminal:'Terminal',vscode:'Visual Studio Code','vs code':'Visual Studio Code',code:'Visual Studio Code',preview:'Preview',photos:'Photos',maps:'Maps',whatsapp:'WhatsApp',telegram:'Telegram',slack:'Slack',zoom:'zoom.us',word:'Microsoft Word',excel:'Microsoft Excel',powerpoint:'Microsoft PowerPoint',pages:'Pages',numbers:'Numbers',keynote:'Keynote',textedit:'TextEdit',contacts:'Contacts'};
 const FOLDERS={desktop:'Desktop',documents:'Documents',downloads:'Downloads',pictures:'Pictures',music:'Music',movies:'Movies',home:'~',applications:'/Applications'};
+Object.assign(APP_ALIASES,{calendar:'Calendar','my calendar':'Calendar',email:'Mail','my email':'Mail',inbox:'Mail',mail:'Mail','my mail':'Mail',notes:'Notes','my notes':'Notes',reminders:'Reminders',browser:'Safari','the browser':'Safari'});
 
 /* returns a spoken result string if the utterance was a system command, else null */
 async function trySystemCommand(text){
@@ -1064,8 +1068,8 @@ async function trySystemCommand(text){
     const verb=m[1];
     let target=m[2].replace(/^(the|my|a|up|please)\s+/i,'').replace(/\s+(please|for me|now)$/i,'').trim();
 
-    // data requests belong to the agents, not the operating system
-    if(/^(my )?(calendar|schedule|agenda|email|emails|inbox|mail|messages? from|meetings?)\b/.test(target)) return null;
+    // "what's ON my calendar" is data; "OPEN my calendar" is the app — only block data verbs
+    if(/^(list|go to|navigate to)$/.test(verb) && /^(my )?(calendar|schedule|agenda|email|emails|inbox|mail|meetings?)\b/.test(target)) return null;
 
     const key=target.toLowerCase();
     if(/^(quit|close|exit)$/.test(verb)){
@@ -1197,6 +1201,16 @@ const MCP_AGENTS=['alya','jarvis','nexus','gamma'];
 const NEWS_TRIGGER=/\b(news|headline|latest|update on|happening|current events|trending|today in)\b/i;
 const DRAFT_TRIGGER=/\b(draft|write|prepare|compose|redline|review)\b[\s\S]*\b(contract|agreement|nda|mou|letter|policy|document|proposal|clause|terms)\b/i;
 async function askAgent(a, text, opts={}){
+  // A relayed instruction may itself be a machine command — EXECUTE it, never let an agent pretend.
+  if(opts.relayFrom || opts.fromChain){
+    const sysres = await trySystemCommand(text);
+    if(sysres!==null){
+      busy=false;
+      const after = opts.relayFrom ? ()=>bridgeBack(opts.relayFrom, a, sysres) : null;
+      speak(a, sysres, after);
+      return;
+    }
+  }
   if(!IN_ARTIFACT && !AI_KEY){
     speak(a, "My intelligence link isn't configured on this machine yet, Sir. Tap the KEYS button at the top, paste your Anthropic API key, and I'll be fully thinking within seconds.");
     return;
