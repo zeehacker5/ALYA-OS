@@ -173,7 +173,7 @@
 </div>
 <div id="app">
   <header>
-    <div class="brand"><h1>ALYA</h1><small>OPERATING SYSTEM · v4.2 REAL HANDS</small></div>
+    <div class="brand"><h1>ALYA</h1><small>OPERATING SYSTEM · v4.4 EVERY APP</small></div>
     <div class="hstat mono">
       <span><span class="dot"></span>ONLINE</span>
       <span id="clock">--:--</span>
@@ -903,8 +903,10 @@ async function handleUtterance(text){
   let sysText = payload;
   const askOther = payload.match(/\b(?:ask|tell|get|have)\s+(\w+)\s+(?:to\s+)?(open|launch|start|close|quit|reveal|show|list|mute|unmute|lock|screenshot)\b(.*)$/i);
   if(askOther){ sysText = askOther[2] + (askOther[3]||''); }
+  lastSysFail=null;
   const sysres = await trySystemCommand(sysText);
   if(sysres!==null){ speak(target, sysres); return; }
+  if(lastSysFail){ return systemRepair(target, lastSysFail.text, lastSysFail.err); }
 
   // agent creation intent → handled by Alya regardless of who's active
   if(/\b(create|make|build|add)\b.*\bagent\b/i.test(payload)){ return createAgentByVoice(payload); }
@@ -1028,14 +1030,26 @@ document.getElementById('earsBtn').onclick=async function(){
 /* ================= SYSTEM CONTROL — local daemon bridge (Phase 1) ================= */
 const DAEMON='http://127.0.0.1:8787';
 async function probeDaemon(){
-  try{ const r=await fetch(DAEMON+'/ping',{cache:'no-store'}); sysOnline=r.ok; }
+  try{ const r=await fetch(DAEMON+'/ping',{cache:'no-store'}); const d=await r.json(); sysOnline=!!d.ok; }
   catch(e){ sysOnline=false; }
   if(sysOnline && SYS_KEY) addLog('sys','SYSTEM','Local control daemon online — ALYA can operate this Mac.');
 }
 async function daemon(action, arg){
-  const r=await fetch(DAEMON,{method:'POST',headers:{'Content-Type':'application/json','X-Alya-Token':SYS_KEY},body:JSON.stringify({action,arg})});
+  /* text/plain + token in body = a "simple request": Chrome sends NO preflight,
+     so Private-Network-Access can never silently block it. */
+  const ctl=new AbortController(); const tmo=setTimeout(()=>ctl.abort(), 12000);
+  let r;
+  try{
+    r=await fetch(DAEMON,{method:'POST',headers:{'Content-Type':'text/plain'},
+      body:JSON.stringify({token:SYS_KEY, action, arg}), signal:ctl.signal});
+  }catch(e){
+    clearTimeout(tmo);
+    sysOnline=false;
+    throw new Error('the daemon is not reachable — is it still running in Terminal?');
+  }
+  clearTimeout(tmo);
   const d=await r.json();
-  if(!r.ok || !d.ok) throw new Error(d.error||('daemon '+r.status));
+  if(!d.ok) throw new Error(d.error||'the daemon refused that');
   return d;
 }
 const APP_ALIASES={chrome:'Google Chrome','google chrome':'Google Chrome',safari:'Safari',finder:'Finder',mail:'Mail',calendar:'Calendar',notes:'Notes',reminders:'Reminders',messages:'Messages',imessage:'Messages',music:'Music',spotify:'Spotify',settings:'System Settings','system settings':'System Settings',terminal:'Terminal',vscode:'Visual Studio Code','vs code':'Visual Studio Code',code:'Visual Studio Code',preview:'Preview',photos:'Photos',maps:'Maps',whatsapp:'WhatsApp',telegram:'Telegram',slack:'Slack',zoom:'zoom.us',word:'Microsoft Word',excel:'Microsoft Excel',powerpoint:'Microsoft PowerPoint',pages:'Pages',numbers:'Numbers',keynote:'Keynote',textedit:'TextEdit',contacts:'Contacts'};
@@ -1048,6 +1062,9 @@ async function trySystemCommand(text){
   t=t.replace(/^(hey\s+)?(alya|alia|jarvis|nexus|stark|gamma|zee|z|morgan|atlas|jonathan|doctor hannah|hannah)[\s,:]+/i,'');
   t=t.replace(/^(please|could you|can you|would you|i want you to|i'?d like you to)\s+/i,'').trim();
 
+  if(/\b(what|which|list|show).{0,20}\b(apps|applications)\b/i.test(t) && SYS_KEY && sysOnline){
+    try{ const d=await daemon('list_apps'); return d.said+' For example: '+d.items.slice(0,10).join(', ')+'.'; }catch(e){}
+  }
   const SYS={ 'volume up':'volume_up','turn up the volume':'volume_up','louder':'volume_up',
               'volume down':'volume_down','turn down the volume':'volume_down','quieter':'volume_down',
               'mute':'mute','unmute':'unmute','lock the screen':'lock_screen','lock screen':'lock_screen',
@@ -1059,6 +1076,7 @@ async function trySystemCommand(text){
   const m = t.match(/^(open|launch|start|run|quit|close|exit|reveal|show me|show|go to|navigate to|list)\s+(.+)$/);
   if(!sysAct && !m) return null;
 
+  sysTextOriginal = t;
   if(!SYS_KEY) return "I'd love to, Sir, but system control isn't set up yet. Run the ALYA daemon on your Mac and paste its token into the KEYS panel.";
   if(!sysOnline){ await probeDaemon(); if(!sysOnline) return "The local control daemon isn't answering, Sir. Please make sure it is running in Terminal, then try again."; }
 
@@ -1073,8 +1091,7 @@ async function trySystemCommand(text){
 
     const key=target.toLowerCase();
     if(/^(quit|close|exit)$/.test(verb)){
-      const app=APP_ALIASES[key]||titleCase(target);
-      const d=await daemon('quit_app', app); return d.said;
+      const d=await daemon('quit_app', target); return d.said;
     }
     if(/^(reveal|show me|show)$/.test(verb)){
       const p=FOLDERS[key]||target; const d=await daemon('reveal', p); return d.said;
@@ -1083,17 +1100,46 @@ async function trySystemCommand(text){
       const p=FOLDERS[key]||target; const d=await daemon('list_dir', p);
       return d.said + (d.items && d.items.length ? ' Top items: '+d.items.slice(0,8).join(', ')+'.' : '');
     }
-    // open / launch / start / run
-    if(APP_ALIASES[key]){ const d=await daemon('open_app', APP_ALIASES[key]); return d.said; }
+    // open / launch / start / run — the daemon resolves ANY app installed on the Mac
     if(FOLDERS[key]){ const d=await daemon('open_path', FOLDERS[key]); return d.said; }
-    try{ const d=await daemon('open_app', titleCase(target)); return d.said; }
+    try{ const d=await daemon('open_app', target); return d.said; }
     catch(e1){
       try{ const d=await daemon('open_path', target); return d.said; }
-      catch(e2){ return "I could not find an app or file called "+target+", Sir."; }
+      catch(e2){ throw e1; }   /* real reason surfaces to the repair loop */
     }
   }catch(e){
-    return "That didn't go through, Sir — "+e.message+".";
+    lastSysFail={text:sysTextOriginal, err:e.message};
+    return null; /* handled by the repair loop */
   }
+}
+let lastSysFail=null, sysTextOriginal='';
+
+/* Alya (or whoever was asked) escalates to Stark aloud, Stark diagnoses, then she retries — no asking Sir. */
+async function systemRepair(agent, failText, err){
+  const stark=agents.find(a=>a.id==='stark');
+  speak(agent, "That didn't come up, Sir. Stark, the system reports: "+err+" — take a look, please.", async ()=>{
+    switchAgent(stark,false);
+    busy=true; busyT=Date.now();
+    let diag="Checking the daemon link now.";
+    try{
+      const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),
+        body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:120,system:GLOBAL_RULES+'\n\n'+stark.sys,
+          messages:[{role:'user',content:'The local control daemon failed with: "'+err+'" while trying: "'+failText+'". In ONE or TWO short spoken sentences to Alya, say the most likely cause and the single fix Sir should apply. Be concrete (e.g. the daemon is not running, the token does not match, the app is not on the allowed list, macOS automation permission was denied).'}]})});
+      const d=await r.json();
+      const t=(d.content||[]).filter(b=>b.type==='text').map(b=>b.text).join(' ').trim();
+      if(t) diag=t;
+    }catch(e){}
+    busy=false;
+    speak(stark, diag, async ()=>{
+      switchAgent(agent,false);
+      await probeDaemon();
+      if(!sysOnline){ speak(agent, "The daemon is still not answering, Sir. Once it is running again, I will open it immediately."); return; }
+      speak(agent, "Trying again now, Sir.", async ()=>{
+        const retry=await trySystemCommand(failText);
+        speak(agent, retry===null ? "It still will not come up, Sir. Stark has told you what to fix." : retry);
+      });
+    });
+  });
 }
 function titleCase(s){ return s.replace(/\b\w/g,c=>c.toUpperCase()); }
 function similar(a,b){
@@ -1203,6 +1249,7 @@ const DRAFT_TRIGGER=/\b(draft|write|prepare|compose|redline|review)\b[\s\S]*\b(c
 async function askAgent(a, text, opts={}){
   // A relayed instruction may itself be a machine command — EXECUTE it, never let an agent pretend.
   if(opts.relayFrom || opts.fromChain){
+    lastSysFail=null;
     const sysres = await trySystemCommand(text);
     if(sysres!==null){
       busy=false;
@@ -1210,6 +1257,7 @@ async function askAgent(a, text, opts={}){
       speak(a, sysres, after);
       return;
     }
+    if(lastSysFail){ busy=false; return systemRepair(a, lastSysFail.text, lastSysFail.err); }
   }
   if(!IN_ARTIFACT && !AI_KEY){
     speak(a, "My intelligence link isn't configured on this machine yet, Sir. Tap the KEYS button at the top, paste your Anthropic API key, and I'll be fully thinking within seconds.");
