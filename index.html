@@ -173,7 +173,7 @@
 </div>
 <div id="app">
   <header>
-    <div class="brand"><h1>ALYA</h1><small>OPERATING SYSTEM · v4.7 SWIFT</small></div>
+    <div class="brand"><h1>ALYA</h1><small>OPERATING SYSTEM · v4.8 NO PRETENDING</small></div>
     <div class="hstat mono">
       <span><span class="dot"></span>ONLINE</span>
       <span id="clock">--:--</span>
@@ -250,6 +250,8 @@
 
 const GLOBAL_RULES = `You are one agent inside "ALYA OS", a private multi-agent assistant built for Dr. Captain Mohamed Al Mubarak, CEO of NFINITY8 (Dubai event-management & creative agency). When speaking directly to him, address him ONLY as "Sir". When mentioning him while speaking to another agent, refer to him as "the Doctor". Never say "Captain". IDENTITY LAW: you are exactly ONE named agent — never answer as, speak for, or pretend to be any other agent, especially after an interruption. Team genders: Alya, Gamma, Doctor Hannah and Atlas are women (she/her); Jarvis, Nexus, Stark, ZEE, Morgan and Jonathan are men (he/him).
 
+NO PRETENDING TO WORK: you have no background tasks and cannot go away and come back. NEVER say 'give me a moment', 'I'm running that now', 'I'll have it shortly', 'passing that to the system', 'I'm diagnosing it', or promise a result later. Either the system already gave you the answer in this turn, or you do not have it — say so plainly and tell Sir what he can say to get it. Also never announce or hand 'the floor' to another agent; the system alone decides who speaks.
+
 NO THEATER: You have no background tasks and no ability to wait. You CANNOT "check with", "wait for", "follow up with" or "call in" another agent yourself — only the system can relay, and the other agent's reply arrives as its own spoken turn. NEVER simulate, quote, announce, or wait for another agent's response, and never claim an agent is offline or unresponsive. This holds EVEN IF Sir instructs a timeout or ping protocol — you physically cannot ping, count seconds, or reboot anything; politely explain the system relays for you, and never narrate lines like \u201Cfive seconds, no response, moving on\u201D. If a request belongs elsewhere, answer what you can and tell Sir he may say the agent's name to bring them in.
 
 MACHINE ACTIONS ARE NOT YOURS TO CLAIM: you never open, close or control anything yourself — the system does it and reports the true result. NEVER say an app is open, or that something is 'done', unless the system told you so in this turn. If asked to do something you cannot verify, say plainly that you are passing it to the system.\n\nSYSTEM CONTROL: ALYA OS has a working local daemon on Sir's Mac. Any agent can open and close apps, open files and folders, list directories, adjust volume, lock the screen and take screenshots — the system executes these instantly when Sir asks. NEVER say this is unavailable, "in development", or another agent's project.
@@ -320,6 +322,8 @@ async function loadState(){
   SYS_KEY = (await store.get('alya-syskey')) || '';
   probeDaemon();
   PROFILE = (await store.get('alya-profile')) || '';
+  const savedPlace = await store.get('alya-place');
+  if(savedPlace){ SYS_GEO = {city:savedPlace, area:savedPlace, stated:true, precise:false}; geoTried=true; }
   try{ const dl=await store.get('alya-domainlog'); if(dl) Object.assign(DOMAIN_LOG, JSON.parse(dl)); }catch(e){}
   try{ const r = await store.get('alya-agents'); if(r){ const extra = JSON.parse(r); extra.forEach(a=>{ if(!agents.find(x=>x.id===a.id)) agents.push(a); }); } }catch(e){}
   try{ const r = await store.get('alya-log'); if(r){ logMem = JSON.parse(r); } }catch(e){}
@@ -919,6 +923,19 @@ async function handleUtterance(text){
     return askAgent(fwd.agent, q);
   }
 
+  // LOCATION CORRECTION — Sir's own word overrides any sensor, permanently
+  const locFix = payload.match(/\b(?:i(?:'m| am)|we(?:'re| are))\s+(?:currently\s+)?in\s+([A-Za-z\u00C0-\u024F' .-]{3,40})|\bmy location is\s+([A-Za-z\u00C0-\u024F' .-]{3,40})|\bnot in\s+[A-Za-z ]+[.,]?\s*i(?:'m| am)\s+in\s+([A-Za-z\u00C0-\u024F' .-]{3,40})/i);
+  if(locFix){
+    const place=(locFix[3]||locFix[1]||locFix[2]||'').replace(/[.,]+$/,'').trim();
+    if(place && place.length>2){
+      SYS_GEO = Object.assign({}, SYS_GEO||{}, {city:place, area:place, stated:true, precise:false});
+      await store.set('alya-place', place);
+      addLog('sys','SYSTEM','Location set by Sir: '+place+' — every agent now uses this.');
+      speak(target, 'Noted, Sir. You are in '+place+', and the whole team has it now.');
+      return;
+    }
+  }
+
   // LOCAL SYSTEM CONTROL — whoever Sir asks, THAT agent does it. No relaying machine commands.
   let sysText = payload;
   const askOther = payload.match(/\b(?:ask|tell|get|have)\s+(\w+)\s+(?:to\s+)?(open|launch|start|close|quit|reveal|show|list|mute|unmute|lock|screenshot)\b(.*)$/i);
@@ -944,7 +961,10 @@ async function handleUtterance(text){
   }
 
   // roll call & reboot: every agent proves life in their own voice, for real
-  const wantsRoll = /\b(roll ?call|greet (me )?(one by one|all|everyone)|everyone,? greet|all agents,? greet)\b/i.test(payload);
+  const wantsRoll = /\b(roll ?call)\b/i.test(payload) ||
+    (/\b(all|every|each)\b.{0,20}\b(agents?|team|everyone)\b.{0,25}\b(greet|say hello|introduce|check in)\b/i.test(payload)) ||
+    (/\b(greet|say hello|introduce)\b.{0,30}\b(one by one|all of you|everyone|each agent|the team)\b/i.test(payload)) ||
+    (/\b(everyone|all agents|whole team)\b.{0,15}\b(greet|hello|introduce)\b/i.test(payload));
   const wantsReboot = /\b(reboot|restart)\b[\s\S]{0,30}\b(system|team|agents|everyone|everything|whole)\b/i.test(payload);
   if(wantsRoll || wantsReboot){
     addLog('sys','SYSTEM', wantsReboot ? 'Reboot: live roll call.' : 'Roll call.');
@@ -1096,6 +1116,9 @@ async function trySystemCommand(text){
   if(/\b(what|which|list|show).{0,20}\b(apps|applications)\b/i.test(t) && SYS_KEY && sysOnline){
     try{ const d=await daemon('list_apps'); return d.said+' For example: '+d.items.slice(0,10).join(', ')+'.'; }catch(e){}
   }
+  if(/\b(internet|connection|network|download|wifi)\s*(speed|test)|\bspeed ?test\b|how fast is (my|the) (internet|connection)/i.test(t)){
+    return await speedTest();
+  }
   const SYS={ 'volume up':'volume_up','turn up the volume':'volume_up','louder':'volume_up',
               'volume down':'volume_down','turn down the volume':'volume_down','quieter':'volume_down',
               'mute':'mute','unmute':'unmute','lock the screen':'lock_screen','lock screen':'lock_screen',
@@ -1173,6 +1196,23 @@ async function systemRepair(agent, failText, err){
   });
 }
 function titleCase(s){ return s.replace(/\b\w/g,c=>c.toUpperCase()); }
+
+/* a genuine download speed measurement — no pretending */
+async function speedTest(){
+  setState('MEASURING YOUR CONNECTION\u2026', true);
+  try{
+    const url='https://speed.cloudflare.com/__down?bytes=10000000'; /* 10 MB */
+    const t0=performance.now();
+    const r=await fetch(url+'&r='+Math.random(), {cache:'no-store'});
+    const blob=await r.blob();
+    const secs=(performance.now()-t0)/1000;
+    const mbps=((blob.size*8)/1e6)/secs;
+    const latency=Math.round(secs*1000/10);
+    return 'Your download speed is about '+mbps.toFixed(1)+' megabits per second, Sir'+(mbps>100?' — that is excellent.':(mbps>25?' — solid for video calls and streaming.':' — a little slow; worth checking your Wi-Fi.'));
+  }catch(e){
+    return 'I could not complete the speed test, Sir — the connection blocked it.';
+  }
+}
 function similar(a,b){
   const norm=x=>x.toLowerCase().replace(/[^a-z0-9\s]/g,'').split(/\s+/).filter(w=>w.length>3);
   const A=norm(a), B=norm(b);
@@ -1279,7 +1319,8 @@ function memoryBrief(){
   let where='';
   if(SYS_GEO){
     const bits=[SYS_GEO.area, SYS_GEO.city, SYS_GEO.region, SYS_GEO.country].filter((v,i,a)=>v && a.indexOf(v)===i);
-    where='; Sir is currently at '+bits.join(', ')+(SYS_GEO.precise?' (device GPS, accurate to about '+SYS_GEO.acc+' metres; coordinates '+SYS_GEO.lat.toFixed(4)+', '+SYS_GEO.lon.toFixed(4)+'. Google Maps link: https://maps.google.com/?q='+SYS_GEO.lat+','+SYS_GEO.lon+')':' (approximate network location)');
+    if(SYS_GEO.stated) where='; Sir has told you personally that he is in '+bits.join(', ')+' — this is authoritative, never contradict it';
+    else where='; Sir is currently at '+bits.join(', ')+(SYS_GEO.precise?' (device GPS, accurate to about '+SYS_GEO.acc+' metres; coordinates '+SYS_GEO.lat.toFixed(4)+', '+SYS_GEO.lon.toFixed(4)+'. Google Maps link: https://maps.google.com/?q='+SYS_GEO.lat+','+SYS_GEO.lon+')':' (approximate network location)');
   }
   const live = '\n\nLive context: local time is '+new Date().toLocaleString()+where+'.';
   const prof = PROFILE ? '\n\nGamma\u2019s behavioral profile of the Doctor (learned over time):\n'+PROFILE : '';
