@@ -173,7 +173,7 @@
 </div>
 <div id="app">
   <header>
-    <div class="brand"><h1>ALYA</h1><small>OPERATING SYSTEM · v4.8 NO PRETENDING</small></div>
+    <div class="brand"><h1>ALYA</h1><small>OPERATING SYSTEM · v4.9 EMPOWERED</small></div>
     <div class="hstat mono">
       <span><span class="dot"></span>ONLINE</span>
       <span id="clock">--:--</span>
@@ -249,6 +249,8 @@
 =============================================================*/
 
 const GLOBAL_RULES = `You are one agent inside "ALYA OS", a private multi-agent assistant built for Dr. Captain Mohamed Al Mubarak, CEO of NFINITY8 (Dubai event-management & creative agency). When speaking directly to him, address him ONLY as "Sir". When mentioning him while speaking to another agent, refer to him as "the Doctor". Never say "Captain". IDENTITY LAW: you are exactly ONE named agent — never answer as, speak for, or pretend to be any other agent, especially after an interruption. Team genders: Alya, Gamma, Doctor Hannah and Atlas are women (she/her); Jarvis, Nexus, Stark, ZEE, Morgan and Jonathan are men (he/him).
+
+YOU CAN BRING IN ANY AGENT: if another agent should answer, end your reply with a control tag on its own line, exactly: <<ASK agent_id: the question>> — valid ids: alya, jarvis, gamma, nexus, stark, zee, hannah, morgan, atlas, jonathan. The system WILL deliver it and they WILL answer out loud. Use it whenever Sir asks you to check with, ping, or hand over to someone. Never claim you are unable to reach another agent.
 
 NO PRETENDING TO WORK: you have no background tasks and cannot go away and come back. NEVER say 'give me a moment', 'I'm running that now', 'I'll have it shortly', 'passing that to the system', 'I'm diagnosing it', or promise a result later. Either the system already gave you the answer in this turn, or you do not have it — say so plainly and tell Sir what he can say to get it. Also never announce or hand 'the floor' to another agent; the system alone decides who speaks.
 
@@ -664,10 +666,12 @@ function startListening(){ if(earsEngine==='pro') return; if(!rec || listening |
 
 function flushQueue(){ if(queued && !busy){ const q=queued; queued=null; onHeard(q); } }
 const CMD_RX=/\b(open|launch|close|quit|mute|unmute|volume|lock|screenshot|reveal|stop|list|go to|navigate)\b/i;
+const REPLY_RX=/\b(done|it'?s done|finished|ready|yes|yeah|no|ok|okay|enabled|downloaded|created|saved|installed|complete|next|continue|go ahead|i'?m here|correct|confirm)\b/i;
 function isClutter(t){
   if(Date.now()<hotUntil) return false;
   if(detectAgentCall(t)) return false;
   if(CMD_RX.test(t)) return false;
+  if(REPLY_RX.test(t)) return false;          /* short answers to Sir's own workflow are NOT noise */
   return t.trim().split(/\s+/).length < 3;
 }
 async function onHeard(text){
@@ -817,7 +821,7 @@ async function relayAsk(relayer, spec, payload){
   speak(relayer, line, fireRelayStep);
 }
 
-let pendingReadback=null, relayChain=[], currentRelayer=null, nextRelayStep=null;
+let pendingReadback=null, relayChain=[], currentRelayer=null, nextRelayStep=null, pendingPlace=null;
 function fireRelayStep(){
   if(!nextRelayStep) return;
   const st=nextRelayStep; nextRelayStep=null;
@@ -887,6 +891,17 @@ function bridgeBack(relayer, spec, replyText){
 async function handleUtterance(text){
   if(busy) return;
   addLog('user','Sir', text);
+  if(pendingPlace){
+    const p=pendingPlace; pendingPlace=null;
+    if(/\b(yes|yeah|correct|confirm|do it|go ahead|please do|that'?s right)\b/i.test(text)){
+      SYS_GEO = Object.assign({}, SYS_GEO||{}, {city:p, area:p, stated:true, precise:false});
+      await store.set('alya-place', p);
+      addLog('sys','SYSTEM','Location set by Sir: '+p);
+      speak(active, 'Done, Sir. You are in '+p+', and the whole team has it.');
+      return;
+    }
+    if(/\b(no|nope|cancel|forget it|wrong)\b/i.test(text)){ speak(active,'Understood, Sir — leaving your location as it was.'); return; }
+  }
   if(pendingReadback){
     const pr=pendingReadback;
     const wc=text.trim().split(/\s+/).length;
@@ -927,11 +942,10 @@ async function handleUtterance(text){
   const locFix = payload.match(/\b(?:i(?:'m| am)|we(?:'re| are))\s+(?:currently\s+)?in\s+([A-Za-z\u00C0-\u024F' .-]{3,40})|\bmy location is\s+([A-Za-z\u00C0-\u024F' .-]{3,40})|\bnot in\s+[A-Za-z ]+[.,]?\s*i(?:'m| am)\s+in\s+([A-Za-z\u00C0-\u024F' .-]{3,40})/i);
   if(locFix){
     const place=(locFix[3]||locFix[1]||locFix[2]||'').replace(/[.,]+$/,'').trim();
-    if(place && place.length>2){
-      SYS_GEO = Object.assign({}, SYS_GEO||{}, {city:place, area:place, stated:true, precise:false});
-      await store.set('alya-place', place);
-      addLog('sys','SYSTEM','Location set by Sir: '+place+' — every agent now uses this.');
-      speak(target, 'Noted, Sir. You are in '+place+', and the whole team has it now.');
+    const NOT_A_PLACE=/^(audience|a hurry|the middle|trouble|charge|control|the process|fact|time|order|a meeting|a call|the car|the office|bed|here|there)$/i;
+    if(place && place.length>2 && !NOT_A_PLACE.test(place)){
+      pendingPlace=place;
+      speak(target, 'Just to confirm, Sir — shall I set your location to '+place+' for the whole team?');
       return;
     }
   }
@@ -1077,10 +1091,19 @@ document.getElementById('earsBtn').onclick=async function(){
 
 /* ================= SYSTEM CONTROL — local daemon bridge (Phase 1) ================= */
 const DAEMON='http://127.0.0.1:8787';
+let daemonVer=0;
 async function probeDaemon(){
-  try{ const r=await fetch(DAEMON+'/ping',{cache:'no-store'}); const d=await r.json(); sysOnline=!!d.ok; }
-  catch(e){ sysOnline=false; }
-  if(sysOnline && SYS_KEY) addLog('sys','SYSTEM','Local control daemon online — ALYA can operate this Mac.');
+  try{
+    const r=await fetch(DAEMON+'/ping',{cache:'no-store'}); const d=await r.json();
+    sysOnline=!!d.ok; daemonVer=parseFloat(d.version||'1');
+  }catch(e){ sysOnline=false; daemonVer=0; }
+  if(sysOnline && SYS_KEY){
+    if(daemonVer < 3){
+      addLog('sys','SYSTEM','⚠ OUTDATED DAEMON (v'+daemonVer+'). This is why apps will not open. Replace alya_daemon.py on your Mac with the v3 file, then restart it.');
+    } else {
+      addLog('sys','SYSTEM','Local control daemon v'+daemonVer+' online — every app on this Mac is available.');
+    }
+  }
 }
 async function daemon(action, arg){
   /* text/plain + token in body = a "simple request": Chrome sends NO preflight,
@@ -1096,7 +1119,17 @@ async function daemon(action, arg){
     throw new Error('the daemon is not reachable — is it still running in Terminal?');
   }
   clearTimeout(tmo);
-  const d=await r.json();
+  let d=await r.json();
+  /* old daemon (v1/v2) expects the token in a header — retry that way for compatibility */
+  if(!d.ok && /unauthor/i.test(d.error||'')){
+    try{
+      const r2=await fetch(DAEMON,{method:'POST',headers:{'Content-Type':'application/json','X-Alya-Token':SYS_KEY},body:JSON.stringify({action,arg})});
+      const d2=await r2.json();
+      if(d2.ok) return d2;
+      d=d2;
+    }catch(e){}
+    if(daemonVer<3) throw new Error('your Mac is running an OUTDATED daemon — replace alya_daemon.py with the new version and restart it');
+  }
   if(!d.ok) throw new Error(d.error||'the daemon refused that');
   return d;
 }
@@ -1397,8 +1430,21 @@ async function askAgent(a, text, opts={}){
     } else if(data.error){
       reply = /auth|key|401/i.test(JSON.stringify(data.error)) ? 'That API key was rejected, Sir. Check it under the KEYS button.' : 'System error, Sir: '+(data.error.message||'unknown');
     } else reply='No response received, Sir.';
+    /* an agent may summon another — the system actually delivers it */
+    let summon=null;
+    const sm = reply.match(/<<\s*ASK\s+(\w+)\s*:\s*([\s\S]+?)>>/i);
+    if(sm){
+      const tgt=agents.find(x=>x.id===sm[1].toLowerCase());
+      reply = reply.replace(sm[0],'').trim();
+      if(tgt && tgt.id!==a.id) summon={spec:tgt, q:sm[2].trim()};
+    }
     history.push({role:'user',content:'['+a.name+'] '+text},{role:'assistant',content:reply});
     busy=false;
+    if(summon){
+      addLog('sys',a.name,'Summoning '+summon.spec.name+'.');
+      speak(a, reply || (summon.spec.spoken+', over to you.'), ()=>{ relayAsk(a, summon.spec, summon.q); });
+      return;
+    }
     if(opts.relayFrom && opts.relayLine && similar(reply, opts.relayLine)){
       addLog('sys','SYSTEM', a.name+' echoed the question — re-asking properly.');
       busy=false;
