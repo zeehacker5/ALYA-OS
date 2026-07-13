@@ -173,7 +173,7 @@
 </div>
 <div id="app">
   <header>
-    <div class="brand"><h1>ALYA</h1><small>OPERATING SYSTEM · v4.6 CLEAN SIGNAL</small></div>
+    <div class="brand"><h1>ALYA</h1><small>OPERATING SYSTEM · v4.7 SWIFT</small></div>
     <div class="hstat mono">
       <span><span class="dot"></span>ONLINE</span>
       <span id="clock">--:--</span>
@@ -616,7 +616,7 @@ function isEcho(t){
 let pendBuf='', pendTimer=null;
 function scheduleProcess(){
   clearTimeout(pendTimer);
-  pendTimer=setTimeout(()=>{ const t=pendBuf.trim(); pendBuf=''; if(t) onHeard(t); }, 1300);
+  pendTimer=setTimeout(()=>{ const t=pendBuf.trim(); pendBuf=''; if(t) onHeard(t); }, 900);
 }
 function micUI(on){ document.getElementById('micBtn').classList.toggle('live', on); }
 let lastAlive=Date.now();
@@ -795,11 +795,11 @@ async function decomposeChain(target, payload, mentioned){
 /* natural agent-to-agent relay: the relayer asks in their own words; the specialist answers THEM */
 async function relayAsk(relayer, spec, payload){
   currentRelayer=relayer;
-  busy=true; busyT=Date.now(); setState(relayer.name+' \u2192 '+spec.name+'\u2026', true); coreMode('speaking');
+  busy=true; busyT=Date.now(); ensureGeo(); setState(relayer.name+' \u2192 '+spec.name+'\u2026', true); coreMode('speaking');
   let line = spec.spoken+', I need your read on something for the Doctor.';
   try{
     const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),
-      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:90,messages:[{role:'user',content:
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:60,messages:[{role:'user',content:
 'You are '+relayer.spoken+' in a voice assistant. In ONE short natural spoken sentence, ask '+spec.spoken+' the following on the Doctor\u2019s behalf, in your own words. Address '+spec.spoken+' by name. Do NOT quote or read the request verbatim; paraphrase it like a colleague would. Request: '+payload}]})});
     const d=await r.json();
     const t=(d.content||[]).filter(b=>b.type==='text').map(b=>b.text).join(' ').trim();
@@ -851,8 +851,25 @@ async function crossLog(text){
 }
 async function ensureGeo(){
   if(SYS_GEO || geoTried) return; geoTried=true;
+  const precise = await new Promise(res=>{
+    if(!navigator.geolocation) return res(null);
+    navigator.geolocation.getCurrentPosition(
+      p=>res({lat:p.coords.latitude, lon:p.coords.longitude, acc:Math.round(p.coords.accuracy)}),
+      ()=>res(null), {enableHighAccuracy:true, timeout:8000, maximumAge:600000});
+  });
+  if(precise){
+    let place={};
+    try{
+      const r=await (await fetch('https://api.bigdatacloud.net/data/reverse-geocode-client?latitude='+precise.lat+'&longitude='+precise.lon+'&localityLanguage=en')).json();
+      place={city:r.city||r.locality, area:r.locality, region:r.principalSubdivision, country:r.countryName};
+    }catch(e){}
+    SYS_GEO={...place, lat:precise.lat, lon:precise.lon, acc:precise.acc,
+             tz:Intl.DateTimeFormat().resolvedOptions().timeZone, precise:true};
+    addLog('sys','SYSTEM','Precise location acquired \u2014 '+(SYS_GEO.area||SYS_GEO.city||'')+(SYS_GEO.acc?' (\u00B1'+SYS_GEO.acc+'m)':''));
+    return;
+  }
   try{ const g=await (await fetch('https://ipapi.co/json/')).json();
-    SYS_GEO={city:g.city, region:g.region, country:g.country_name, tz:g.timezone}; }catch(e){}
+    SYS_GEO={city:g.city, region:g.region, country:g.country_name, tz:g.timezone, lat:g.latitude, lon:g.longitude, precise:false}; }catch(e){}
 }
 function splitTasks(t){
   return t.split(/\s*(?:[,.;]\s*)?(?:and then|then|and also|also|after that|afterwards)\s+|\s*[,;]?\s+and\s+(?=(?:ask|tell|check|speak|talk|see|find|get|have)\b)/i)
@@ -978,7 +995,7 @@ async function startProEars(){
     if(rms<PRO_TH){ noiseFloor=noiseFloor*0.95+rms*0.05; PRO_TH=Math.max(0.02, noiseFloor*3); }
     const voiced=rms>PRO_TH;
     if(voiced){ proVoiced++; proSilence=0; } else { proSilence++; if(!proActive) proVoiced=0; }
-    if(!proActive && proVoiced>=3){
+    if(!proActive && proVoiced>=2){
       proActive=true; proWasAgentTalking=(speechSynthesis.speaking||!!curAudio);
       if(proWasAgentTalking){ /* echo-cancelled mic: real voice = Sir speaking. Stop INSTANTLY. */
         stopSpeaking(); if(currentRelayer){ switchAgent(currentRelayer, false); } hotUntil=Date.now()+15000; setState('GO AHEAD, SIR — LISTENING.', true);
@@ -989,7 +1006,7 @@ async function startProEars(){
       proRec.onstop=()=>{ const blob=new Blob(proChunks,{type:(proRec.mimeType||'audio/webm')}); transcribePro(blob); };
       proRec.start(); micUI(true); if(!busy){ coreMode('listening'); setState('LISTENING (PRO)…', true); }
     }
-    if(proActive && proSilence>=18){ /* ~0.9s of silence = you finished */
+    if(proActive && proSilence>=13){ /* ~0.65s silence = finished — snappier */
       proActive=false; proVoiced=0; micUI(false);
       try{ proRec.stop(); }catch(e){}
     }
@@ -1178,14 +1195,24 @@ function cleanUtterance(t){
   t = t.replace(/^\s*(yeah|yes|ok|okay|so|well|um|uh|erm|right|alright|now)\s*[,.]?\s+/i,''); /* fillers */
   return t.trim();
 }
+function looksClean(t){
+  const s=t.trim();
+  if(s.split(/\s+/).length < 2) return false;
+  const known = agents.some(a=>(a.aliases||[]).some(al=>new RegExp('\\b'+al+'\\b','i').test(s)));
+  const machine = MACHINE_RX.test(s);
+  const oddName = /^\s*[A-Z][a-z]{2,9}\s*[,:]/.test(s) && !known;
+  if(oddName) return false;
+  return known || machine || s.split(/\s+/).length >= 4;
+}
 async function refineTranscript(raw){
+  if(looksClean(raw)) return cleanUtterance(raw);   /* FAST PATH — no extra round trip */
   if(!IN_ARTIFACT && !AI_KEY) return raw;
   const names = agents.map(a=>a.spoken).join(', ');
   const ctx = logMem.slice(-6).map(m=>m.who+': '+m.text).join('\n') || '(start of session)';
   try{
     const ctl=new AbortController(); const tmo=setTimeout(()=>ctl.abort(), 4500);
     const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:apiHeaders(),signal:ctl.signal,
-      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:150,system:
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:100,system:
 `You clean up voice transcripts for ALYA OS. The only agent names that exist are: ${names}. The speaker is "Sir".
 Return ONLY the corrected transcript, nothing else.
 OUTPUT FORMAT: return ONLY the corrected sentence itself. Never prefix it with "Sir:" or any speaker label. Never wrap it in quotation marks. Never add commentary, reasoning or explanation.
@@ -1249,7 +1276,12 @@ function domainNotes(){
   return out ? '\n\nSHARED SPECIALIST FILES (logged for Sir across all conversations):'+out : '';
 }
 function memoryBrief(){
-  const live = '\n\nLive context: local time is '+new Date().toLocaleString()+(SYS_GEO? '; the Doctor is currently in '+SYS_GEO.city+', '+SYS_GEO.country+' (approximate, via network location; timezone '+SYS_GEO.tz+')':'')+'.';
+  let where='';
+  if(SYS_GEO){
+    const bits=[SYS_GEO.area, SYS_GEO.city, SYS_GEO.region, SYS_GEO.country].filter((v,i,a)=>v && a.indexOf(v)===i);
+    where='; Sir is currently at '+bits.join(', ')+(SYS_GEO.precise?' (device GPS, accurate to about '+SYS_GEO.acc+' metres; coordinates '+SYS_GEO.lat.toFixed(4)+', '+SYS_GEO.lon.toFixed(4)+'. Google Maps link: https://maps.google.com/?q='+SYS_GEO.lat+','+SYS_GEO.lon+')':' (approximate network location)');
+  }
+  const live = '\n\nLive context: local time is '+new Date().toLocaleString()+where+'.';
   const prof = PROFILE ? '\n\nGamma\u2019s behavioral profile of the Doctor (learned over time):\n'+PROFILE : '';
   const recent = logMem.slice(-30).map(m=>m.who+': '+m.text).join('\n');
   return live + prof + domainNotes() + (recent ? '\n\nFULL SHARED TRANSCRIPT of this session (every agent sees all of it):\n'+recent : '');
@@ -1392,9 +1424,9 @@ async function warmGreeting(){
   const part = h<12?'morning':(h<18?'afternoon':'evening');
   let line = "I hope it's a pleasant one.";
   try{
-    const g=await (await fetch('https://ipapi.co/json/')).json();
-    SYS_GEO={city:g.city, region:g.region, country:g.country_name, tz:g.timezone}; geoTried=true;
-    const w=await (await fetch('https://api.open-meteo.com/v1/forecast?latitude='+g.latitude+'&longitude='+g.longitude+'&current=temperature_2m,weather_code,wind_speed_10m,is_day')).json();
+    await ensureGeo();
+    const g = SYS_GEO || {};
+    const w=await (await fetch('https://api.open-meteo.com/v1/forecast?latitude='+g.lat+'&longitude='+g.lon+'&current=temperature_2m,weather_code,wind_speed_10m,is_day')).json();
     const t=Math.round(w.current.temperature_2m), c=w.current.weather_code, ws=w.current.wind_speed_10m;
     const day = w.current.is_day===1;
     const wind = ws<20?'light winds':(ws<35?'a moderate breeze':'strong winds');
