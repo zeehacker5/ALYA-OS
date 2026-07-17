@@ -173,7 +173,7 @@
 </div>
 <div id="app">
   <header>
-    <div class="brand"><h1>ALYA</h1><small>OPERATING SYSTEM · v4.9 EMPOWERED</small></div>
+    <div class="brand"><h1>ALYA</h1><small>OPERATING SYSTEM · v5.0 RESPONSIVE</small></div>
     <div class="hstat mono">
       <span><span class="dot"></span>ONLINE</span>
       <span id="clock">--:--</span>
@@ -530,9 +530,8 @@ function speakWeb(a, text, onDone){
 setInterval(()=>{
   try{
     if(speechSynthesis.paused) speechSynthesis.resume();
-    if(speechSynthesis.speaking) speechSynthesis.resume();
   }catch(e){}
-}, 5000);
+}, 10000);
 let elFails=0, elDisabled=false;
 async function speakEleven(a, text, onDone){
   if(elDisabled){ speakWeb(a, text, onDone); return; }
@@ -629,6 +628,7 @@ let lastAlive=Date.now();
 setInterval(()=>{
   if(earsEngine!=='basic') return;
   if(!rec || !wakeMode) return;
+  if(busy || speechSynthesis.speaking || curAudio) return;
   const speaking = speechSynthesis.speaking || !!curAudio;
   // unstick: if ears are paused but nobody is actually talking, release them
   if(earsPaused && !speaking && !busy){ earsPaused=false; }
@@ -639,7 +639,7 @@ setInterval(()=>{
     try{ rec.abort(); }catch(e){} // zombie session — abort; onend auto-restarts fresh
     lastAlive=Date.now();
   }
-}, 4000);
+}, 8000);
 window.addEventListener('focus', ()=>{ if(wakeMode && !earsPaused) startListening(); });
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && wakeMode && !earsPaused) startListening(); });
 let curAudio=null;
@@ -918,7 +918,7 @@ async function handleUtterance(text){
     pendingReadback=null;
   }
   crossLog(text);
-  userTurns++; if(userTurns % 8 === 0) learnProfile();
+  userTurns++; if(userTurns % 12 === 0 && !busy) setTimeout(learnProfile,50);
   let called = detectAgentCall(text);
   if(!called){ const guess=unknownNameToAlya(text); if(guess){ called=guess; text=text.replace(KNOWN_NAME_RX,'').trim(); addLog('sys','MIC','Unrecognised name — routing to Alya.'); } }
   let target = called || active;
@@ -1094,7 +1094,8 @@ const DAEMON='http://127.0.0.1:8787';
 let daemonVer=0;
 async function probeDaemon(){
   try{
-    const r=await fetch(DAEMON+'/ping',{cache:'no-store'}); const d=await r.json();
+    const pc=new AbortController(); const pt=setTimeout(()=>pc.abort(),2500);
+    const r=await fetch(DAEMON+'/ping',{cache:'no-store',signal:pc.signal}); const d=await r.json(); clearTimeout(pt);
     sysOnline=!!d.ok; daemonVer=parseFloat(d.version||'1');
   }catch(e){ sysOnline=false; daemonVer=0; }
   if(sysOnline && SYS_KEY){
@@ -1108,7 +1109,7 @@ async function probeDaemon(){
 async function daemon(action, arg){
   /* text/plain + token in body = a "simple request": Chrome sends NO preflight,
      so Private-Network-Access can never silently block it. */
-  const ctl=new AbortController(); const tmo=setTimeout(()=>ctl.abort(), 12000);
+  const ctl=new AbortController(); const tmo=setTimeout(()=>ctl.abort(), 4000);
   let r;
   try{
     r=await fetch(DAEMON,{method:'POST',headers:{'Content-Type':'text/plain'},
@@ -1270,7 +1271,7 @@ function cleanUtterance(t){
 }
 function looksClean(t){
   const s=t.trim();
-  if(s.split(/\s+/).length < 2) return false;
+  if(s.split(/\s+/).length < 2) return true;   /* one or two words: trust it, no round trip */
   const known = agents.some(a=>(a.aliases||[]).some(al=>new RegExp('\\b'+al+'\\b','i').test(s)));
   const machine = MACHINE_RX.test(s);
   const oddName = /^\s*[A-Z][a-z]{2,9}\s*[,:]/.test(s) && !known;
